@@ -7,6 +7,26 @@
 🌦️ 당일 날씨와 온도에 맞는 옷을 추천하고, 🧥 옷을 직접 입어보지 않아도 🪞 가상 피팅을 통해 스타일을 확인할 수 있습니다.  
 또한 👀 컴퓨터 비전 기술을 통해 옷을 자동 인식하고, 🤖 챗봇으로 자연스럽게 소통할 수 있습니다.
 
+<details>
+  <summary>개요 자세히 보기(Click)</summary>
+  <p align="center">
+    <img width="1920" height="1080" alt="001" src="https://github.com/user-attachments/assets/276be116-53c7-4dc0-8a2f-90cac061d557" />
+<img width="1920" height="1080" alt="002" src="https://github.com/user-attachments/assets/f3f8e48a-f528-49c4-a86b-8ffa9f7173d7" />
+<img width="1920" height="1080" alt="003" src="https://github.com/user-attachments/assets/38c2ff5d-54a5-4b9b-8a34-bb7d12c7ca29" />
+<img width="1920" height="1080" alt="004" src="https://github.com/user-attachments/assets/2237e238-2944-40d0-96a6-a5b56d76dfea" />
+<img width="1920" height="1080" alt="005" src="https://github.com/user-attachments/assets/1cf83844-a3bd-4c4a-ac71-fa73a5010f33" />
+<img width="1920" height="1080" alt="006" src="https://github.com/user-attachments/assets/ec2574e2-40d9-40b4-aae2-afa5876eccdf" />
+<img width="1920" height="1080" alt="007" src="https://github.com/user-attachments/assets/51b1d238-1521-4f5f-8540-d049a6500f45" />
+<img width="1920" height="1080" alt="008" src="https://github.com/user-attachments/assets/d4da0571-7893-455c-849e-b91ebba7b4b5" />
+<img width="1920" height="1080" alt="009" src="https://github.com/user-attachments/assets/88603415-ea92-4b68-9ead-841420318863" />
+<img width="1920" height="1080" alt="010" src="https://github.com/user-attachments/assets/2c9a347c-5c32-44e0-8c24-5139217e86ac" />
+<img width="1920" height="1080" alt="011" src="https://github.com/user-attachments/assets/0b948a5e-2639-4a12-8831-3aa2e131bdc9" />
+<img width="1920" height="1080" alt="012" src="https://github.com/user-attachments/assets/3b2ef8fe-86d6-4c00-adc5-6ddc1def5801" />
+
+  </p>
+</details>
+
+
 ---
 
 ## ✨ 주요 기능
