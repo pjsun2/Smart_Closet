@@ -1,5 +1,7 @@
 # 👕 Smart Closet (스마트 클로젯)
 
+<img width="1536" height="1024" alt="smart closet 16 9" src="https://github.com/user-attachments/assets/11757343-f848-4d46-8421-8880fdb5748e" />
+
 ## 📖 프로젝트 개요
 **Smart Closet**은 AI 기반 옷장으로, 사용자가 매일 아침 겪는 "무슨 옷을 입을까?"라는 고민을 해결하기 위해 고안되었습니다.  
 🌦️ 당일 날씨와 온도에 맞는 옷을 추천하고, 🧥 옷을 직접 입어보지 않아도 🪞 가상 피팅을 통해 스타일을 확인할 수 있습니다.  
