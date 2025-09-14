@@ -100,4 +100,6 @@
 - `test`: 테스트 코드 작성 ✅  
 - `chore`: 기타 변경 🔧
 
-<img width="1024" height="1024" alt="icon" src="https://github.com/user-attachments/assets/52866932-3b95-4eb2-8002-2e6e61963631" />
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/52866932-3b95-4eb2-8002-2e6e61963631" alt="DUMIR Logo" width="50%">
+</p>
