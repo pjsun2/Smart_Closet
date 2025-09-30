@@ -1,54 +1,40 @@
 {
-  // 프로젝트 이름입니다. 보통 영어 소문자와 하이픈(-)으로 만듭니다.
   "name": "dumir-smart-closet",
-
-  // 프로젝트의 현재 버전입니다.
   "version": "0.1.0",
-
-  // true로 설정하면 npm에 실수로 공개 배포되는 것을 막아줍니다.
   "private": true,
-
-  // "dependencies": 이 프로젝트가 실제로 동작하기 위해 반드시 필요한 라이브-러리들입니다.
   "dependencies": {
-    "react": "^18.2.0",         // 리액트 핵심 라이브러리
-    "react-dom": "^18.2.0",      // 리액트를 웹 브라우저에 표시하기 위한 라이브러리
-    "react-scripts": "5.0.1"    // 리액트 프로젝트를 쉽게 만들고 실행하기 위한 스크립트 모음
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
   },
-
-  // "devDependencies": 개발 과정에서만 필요한 도구들입니다. 실제 배포된 앱에는 포함되지 않습니다.
   "devDependencies": {
-    "autoprefixer": "^10.4.14", // CSS에 브라우저별 접두사(-webkit-, -ms- 등)를 자동으로 붙여줍니다.
-    "postcss": "^8.4.27",        // Tailwind CSS를 일반 CSS로 변환하기 위해 필요한 도구
-    "tailwindcss": "^3.3.3"   // Tailwind CSS 프레임워크
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27",
+    "tailwindcss": "^3.3.3"
   },
-
-  // "scripts": 명령어를 짧게 줄여서 등록하는 곳입니다. (예: npm run build)
   "scripts": {
-    "start": "react-scripts start", // 개발용 서버 실행 명령어
-    "build": "react-scripts build", // 배포용 파일 생성 명령어 (Render에서 사용)
-    "test": "react-scripts test",   // 테스트 실행 명령어
-    "eject": "react-scripts eject"  // 숨겨진 설정을 밖으로 꺼내는 명령어
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
-
-  // "eslintConfig": 코드의 문법 오류나 스타일을 검사하는 ESLint의 설정입니다.
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
     ]
   },
-
-  // "browserslist": 이 프로젝트가 지원할 웹 브라우저의 버전 범위를 지정합니다.
   "browserslist": {
-    "production": [ // 배포 환경
+    "production": [
       ">0.2%",
       "not dead",
       "not op_mini all"
     ],
-    "development": [ // 개발 환경
+    "development": [
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
     ]
   }
 }
+
