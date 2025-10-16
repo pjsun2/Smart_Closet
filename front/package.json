@@ -2,26 +2,26 @@
   "name": "front",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://127.0.0.1:5000",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "bootstrap": "^5.3.8",
     "react": "^19.1.1",
+    "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.4",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "flask": "cross-env PYTHONPATH=.. FLASK_DEBUG=1 flask --app ../back/server.py run -h 127.0.0.1 -p 5000",
-    "flask1": "cross-env FLASK_APP=back/server.py FLASK_DEBUG=1 flask run -h 127.0.0.1 -p 5000",
+    "start": "cross-env HTTPS=true SSL_CRT_FILE=certs/dev.crt SSL_KEY_FILE=certs/dev.key HOST=0.0.0.0 PORT=3000 react-scripts start",
+    "flask": "cross-env PYTHONPATH=.. FLASK_DEBUG=1 flask --app ../back/server.py run -h 0.0.0.0 -p 5000 --cert certs/dev.crt --key certs/dev.key",
     "dev": "concurrently -k -n FRONT,API -c blue,green \"npm:start\" \"npm:flask\"",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-
   },
   "eslintConfig": {
     "extends": [
