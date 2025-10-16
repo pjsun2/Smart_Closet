@@ -1,2 +1,9 @@
 .env
 .venv312
+
+back/clothes/route_clothes.py
+back/cloths/runs
+back/cloths/상의_specialist_model
+back/cloths/하의_specialist_model
+back/cloths/아우터_specialist_model
+back/cloths/원피스_specialist_model
