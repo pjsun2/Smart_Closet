@@ -11,15 +11,19 @@
 
 ## 👥 팀 소개
 
-| 이름 | 역할 | 사진 |
-|------|------|------|
-| **박재선** | 팀장 | <img src="![KakaoTalk_20251010_215317163](https://github.com/user-attachments/assets/44aa8799-5c01-4caf-850e-6e92d344091f)" width="100" alt="박재선 증명사진"/> |
-| **김태랑** | 팀원 | <img src="![증명사진](https://github.com/user-attachments/assets/4711900b-5c82-487e-87d9-40d083ca1c03)" width="100" alt="김태랑 증명사진"/> |
-| **백지민** | 팀원 | <img src="![KakaoTalk_20251010_195059512](https://github.com/user-attachments/assets/bea077d1-ef26-4948-a480-eae085f0c95d)" width="100" alt="백지민 증명사진"/> |
+| <img src="https://github.com/user-attachments/assets/44aa8799-5c01-4caf-850e-6e92d344091f" width="120" alt="박재선 증명사진"/> | <img src="https://github.com/user-attachments/assets/4711900b-5c82-487e-87d9-40d083ca1c03" width="120" alt="김태랑 증명사진"/> | <img src="https://github.com/user-attachments/assets/bea077d1-ef26-4948-a480-eae085f0c95d" width="120" alt="백지민 증명사진"/> |
+|:---:|:---:|:---:|
+| **박재선** | **김태랑** | **백지민** |
+| 팀장 | 팀원 | 팀원 |
 
+---
+
+**팀명**: DUMIR (두미르)  
 총 3인으로 구성된 팀이며, AI 및 컴퓨터 비전 기술을 접목한 혁신적인 서비스를 목표로 합니다.
 
 ---
+
+
 
 <details>
   <summary>개요 자세히 보기(Click)</summary>
