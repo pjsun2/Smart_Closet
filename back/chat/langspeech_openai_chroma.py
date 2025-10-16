@@ -17,7 +17,7 @@ import playsound
 import asyncio
 import edge_tts
 
-load_dotenv()
+load_dotenv(override=True)
 
 # 출력 스키마 정의
 class FashionRecommendation(BaseModel):
