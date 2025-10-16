@@ -1,18 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './app';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-const container = document.getElementById('root');
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  // <React.StrictMode>
+    <App />
+  // </React.StrictMode>
+);
 
-// 이 컨테이너에 아직 React 루트가 생성되지 않았을 때만 새로 생성하도록 확인합니다.
-// 이렇게 하면 스크립트가 중복으로 실행되더라도 에러가 발생하지 않습니다.
-if (container && !container._reactRootContainer) {
-  const root = ReactDOM.createRoot(container);
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-}
-
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals();
