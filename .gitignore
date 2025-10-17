@@ -7,7 +7,6 @@ back/clothes/상의_specialist_model
 back/clothes/하의_specialist_model
 back/clothes/아우터_specialist_model
 back/clothes/원피스_specialist_model
-<<<<<<< HEAD
 
 *.pyc
 __pycache__/
