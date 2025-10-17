@@ -4,18 +4,26 @@ from config import Config
 from db_ import db, init_db
 from routes.users import users_bp
 from routes.member_test import members_bp
+import os
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
-    app.config.from_object(Config)
-
-    app.register_blueprint(members_bp)
-
+    
     # 308에러 발생 방지
     CORS(app,resources={r"/api/*": {"origins": ["https://localhost:3000", "https://127.0.0.1:3000"]}})
     app.url_map.strict_slashes = False
+    
+    # 사용
+    app.register_blueprint(members_bp)
+    app.register_blueprint(users_bp)
 
+    app.config.from_object(Config)
     os.makedirs(app.instance_path, exist_ok=True)
+    
+    # DB 초기화 & 테이블 생성(마이그레이션 없이)
+    init_db(app)
+    with app.app_context():
+        db.create_all()
 
     @app.route("/")
     def index():

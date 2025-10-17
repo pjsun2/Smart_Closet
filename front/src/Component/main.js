@@ -2,16 +2,22 @@ import React, { useRef, useState, useEffect } from "react";
 import { Button, Container, Row, Col } from "react-bootstrap";
 
 function Main() {
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const streamRef = useRef(null);
-    const timerRef = useRef(null);
+
+    const videoRef = useRef(null); // 비디오 실행 여부
+    const canvasRef = useRef(null); // 캔버스
+    const streamRef = useRef(null); // 
+    const timerRef = useRef(null); // 캡처 예약 타이머
+    const intervalRef = useRef(null); // 카운트다운
+
 
     const [isRunning, setIsRunning] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [shot, setShot] = useState(null);
     const [serverPath, setServerPath] = useState(null);
     const [boxRatio, setBoxRatio] = useState("9 / 16"); // 기본값
+
+    const [countdown, setCountdown] = useState(0); // 5 → 0 카운트다운
+    const [pendingAction, setPendingAction] = useState(null); // 'cloth' | 'fit' | null ai모델 여부
 
     // 스크롤 차단
     useEffect(() => {
@@ -27,9 +33,10 @@ function Main() {
             document.documentElement.style.overflow = prevHtmlOverflow;
             document.body.style.overflow = prevBodyOverflow;
             document.body.style.height   = prevBodyHeight;
+            cleanupTimers();
             stopCamera();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, []);
 
     const cameraFrame = {
@@ -38,39 +45,43 @@ function Main() {
         borderRadius: "20px",
     };
 
+    useEffect(() => {
+        startCamera();
+    }, []);
+
+
     const startCamera = async () => {
         try {
-        if (videoRef.current) {
-            videoRef.current.setAttribute("playsinline", "true");
-            videoRef.current.muted = true; // 모바일 자동재생
-        }
+            if (videoRef.current) {
+                videoRef.current.setAttribute("playsinline", "true");
+                videoRef.current.muted = true; // 모바일 자동재생
+            }
 
-        const constraints = {
-            audio: false,
-            video: {
-            // 카메라
-            facingMode: { ideal: "user" },
-            width:  { ideal: 1280 }, // 4/3 기준으로 
-            height: { ideal: 720  },
-            },
-        };
+            // 이미 스트림 있으면 재사용
+            if (streamRef.current) {
+                setIsRunning(true);
+                return;
+            }
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        streamRef.current = stream;
+            const constraints = {
+                audio: false,
+                video: {
+                facingMode: { ideal: "user" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                },
+            };
 
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            await videoRef.current.play();
-        }
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            streamRef.current = stream;
 
-        setIsRunning(true);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+            }
 
-        // 3초 뒤 자동 1회 캡처 + 업로드
-        timerRef.current = setTimeout(async () => {
-            const dataUrl = captureFrame();
-            // if (dataUrl) await uploadToServer(dataUrl); // -> 캡처후 서버로 이동
-            stopCamera(); // 요구사항대로 캡처 후 종료
-        }, 10000);
+            setIsRunning(true);
+
         } catch (err) {
             console.error("카메라 시작 실패:", err);
             alert("카메라 접근 실패. HTTPS/권한 허용/브라우저 설정을 확인하세요.");
@@ -79,34 +90,89 @@ function Main() {
     };
 
     const stopCamera = () => {
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
-            timerRef.current = null;
-        }
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current.getTracks().forEach((t) => t.stop());
             streamRef.current = null;
         }
         if (videoRef.current) videoRef.current.srcObject = null;
         setIsRunning(false);
     };
 
+    // “정지” 버튼: 예약 캡처 취소 + 썸네일 초기화 + 비디오는 계속 실시간
+    const stopCapture = () => {
+        cleanupTimers();
+        setCountdown(0);
+        setPendingAction(null);
+        setShot(null);           // 썸네일 초기화
+        setServerPath(null);
+        // 비디오는 계속 켜져 있어야 하므로, 꺼져 있으면 다시 켬
+        if (!isRunning) startCamera();
+    };
+
+    // 버튼 클릭 시 5초 뒤 자동 캡처 예약
+    const scheduleCapture = (action /* 'cloth' | 'fit' */) => {
+        if (!isRunning) {
+            // 혹시 꺼져 있으면 켜고 예약
+            startCamera().then(() => scheduleCapture(action));
+            return;
+        }
+        if (timerRef.current) return; // 이미 예약 중이면 무시(중복 방지)
+
+        setPendingAction(action);
+        setCountdown(5);
+
+        intervalRef.current = setInterval(() => {
+            setCountdown((sec) => {
+                if (sec <= 1) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+                }
+                return sec - 1;
+            });
+        }, 1000);
+
+        timerRef.current = setTimeout(async () => {
+            timerRef.current = null; // 실행 직후 해제
+            const dataUrl = captureFrame();
+            // 여기서 dataUrl을 서버로 전송하거나 분기 처리
+            // if (action === 'cloth') await uploadToServer(dataUrl, '/api/cloth');
+            // cloth 옷인식하여 데이터베이스에 저장하는 백엔드 연동 툴, 옷인식 버튼 클릭시 5초후 저장하고 썸네일 저장
+
+            // if (action === 'fit')   await uploadToServer(dataUrl, '/api/fit');
+            // fit 옷 피팅하는 백엔드 연동 툴, 옷피팅 버튼 클릭시 5초후 저장하고 썸네일 저장
+            
+            setPendingAction(null);
+            setCountdown(0);
+        }, 5000);
+    }
+
+     const cleanupTimers = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+    };
+
     const captureFrame = () => {
         if (!videoRef.current || !canvasRef.current) return null;
-        const video  = videoRef.current;
+        const video = videoRef.current;
         const canvas = canvasRef.current;
 
-        const w = video.videoWidth  || 1080;
+        const w = video.videoWidth || 1080;
         const h = video.videoHeight || 1920;
 
-        canvas.width  = w;
+        canvas.width = w;
         canvas.height = h;
 
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, w, h);
 
         const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        setShot(dataUrl);
+        setShot(dataUrl); // 썸네일/상태 저장
         return dataUrl;
     };
 
@@ -120,13 +186,12 @@ function Main() {
         return new Blob([u8], { type: mime });
     };
 
-    
     useEffect(() => {
         const v = videoRef.current;
         const onMeta = () => {
-            const vw = v.videoWidth  || 1080;
+            const vw = v.videoWidth || 1080;
             const vh = v.videoHeight || 1920;
-            setBoxRatio(`${vw} / ${vh}`); // ✅ 비디오 원본 비율로 박스 설정
+            setBoxRatio(`${vw} / ${vh}`);
         };
         v?.addEventListener("loadedmetadata", onMeta);
         return () => v?.removeEventListener("loadedmetadata", onMeta);
@@ -186,6 +251,8 @@ function Main() {
         .catch(err => console.error('load members failed:', err));
     }, []);
 
+    const handleClothSave = () => scheduleCapture("cloth");
+    const handleStartFit = () => scheduleCapture("fit");
 
     return (
         <>
@@ -303,7 +370,11 @@ function Main() {
                     >
                         <div className="d-flex align-items-center justify-content-between">
                         <span>
-                            {isRunning ? "📸 10초 후 자동 캡처 중..." : "대기 중"}
+                            {isRunning
+                            ? pendingAction
+                                ? `⏳ ${countdown}초 뒤 자동 캡처 (${pendingAction === "cloth" ? "옷저장" : "입어보기"})`
+                                : "🎥 실시간 촬영 중"
+                            : "대기 중"}
                             {uploading ? " (업로드 중...)" : ""}
                         </span>
                         <div className="d-flex align-items-center gap-1">
@@ -323,7 +394,7 @@ function Main() {
                 <div className="mt-3 d-flex justify-content-center gap-3">
                 <Button
                     variant="danger"
-                    onClick={startCamera}
+                    // onClick={startCamera}
                     disabled={isRunning || uploading}
                     className="px-4 py-2"
                 >
@@ -331,16 +402,23 @@ function Main() {
                 </Button>
                 <Button
                     variant="primary"
-                    onClick={startCamera}
-                    disabled={isRunning || uploading}
+                    onClick={handleClothSave}
+                    disabled={!isRunning || !!timerRef.current || uploading}
                     className="px-4 py-2"
                 >
-                    시작(10초 뒤 자동 캡처)
+                    옷저장
+                </Button>
+                <Button
+                    variant="warning"
+                    onClick={handleStartFit}
+                    disabled={!isRunning || !!timerRef.current || uploading}
+                    className="px-4 py-2"
+                >
+                    입어보기
                 </Button>
                 <Button
                     variant="secondary"
-                    onClick={stopCamera}
-                    disabled={!isRunning}
+                    onClick={stopCapture}
                     className="px-4 py-2"
                 >
                     정지
