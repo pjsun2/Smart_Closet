@@ -2,11 +2,13 @@ import React, { useRef, useState, useEffect } from "react";
 import { Button, Container, Row, Col } from "react-bootstrap";
 
 function Main() {
+
     const videoRef = useRef(null); // 비디오 실행 여부
     const canvasRef = useRef(null); // 캔버스
     const streamRef = useRef(null); // 
     const timerRef = useRef(null); // 캡처 예약 타이머
     const intervalRef = useRef(null); // 카운트다운
+
 
     const [isRunning, setIsRunning] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -34,6 +36,7 @@ function Main() {
             cleanupTimers();
             stopCamera();
         };
+
     }, []);
 
     const cameraFrame = {
@@ -78,6 +81,7 @@ function Main() {
             }
 
             setIsRunning(true);
+
         } catch (err) {
             console.error("카메라 시작 실패:", err);
             alert("카메라 접근 실패. HTTPS/권한 허용/브라우저 설정을 확인하세요.");
