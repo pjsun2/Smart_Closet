@@ -1,0 +1,19 @@
+-- package.json
+
+# 기존 
+"start": "cross-env HTTPS=true SSL_CRT_FILE=certs/dev.crt SSL_KEY_FILE=certs/dev.key HOST=0.0.0.0 PORT=3000 react-scripts start",
+"flask": "cross-env PYTHONPATH=.. FLASK_DEBUG=1 flask --app ../back/server.py run -h 0.0.0.0 -p 5000 --cert certs/dev.crt --key certs/dev.key",
+
+# 변경
+"flask": "cross-env CUDA_VISIBLE_DEVICES=-1 python ../back/server.py",
+"start": "cross-env HTTPS=false HOST=0.0.0.0 PORT=3000 react-scripts start",
+
+
+
+-- setupProxy.js
+
+# 기존
+target: 'https://localhost:5000'
+
+# 변경
+target: 'http://localhost:5000'

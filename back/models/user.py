@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from db_ import db
 
 class User(db.Model):

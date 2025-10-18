@@ -1,14 +1,15 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Button, Container, Row, Col } from "react-bootstrap";
+import { useNavigate } from 'react-router-dom';
 
 function Main() {
-
+    const navigate = useNavigate(); // 페이지 이동
     const videoRef = useRef(null); // 비디오 실행 여부
     const canvasRef = useRef(null); // 캔버스
     const streamRef = useRef(null); // 
     const timerRef = useRef(null); // 캡처 예약 타이머
     const intervalRef = useRef(null); // 카운트다운
-
+    const fileInputRef = useRef(null); // (옷인식에 사용) 파일 입력
 
     const [isRunning, setIsRunning] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -36,7 +37,6 @@ function Main() {
             cleanupTimers();
             stopCamera();
         };
-
     }, []);
 
     const cameraFrame = {
@@ -81,7 +81,6 @@ function Main() {
             }
 
             setIsRunning(true);
-
         } catch (err) {
             console.error("카메라 시작 실패:", err);
             alert("카메라 접근 실패. HTTPS/권한 허용/브라우저 설정을 확인하세요.");
@@ -235,6 +234,8 @@ function Main() {
     //     load();
     // }, []);
 
+    //
+
     const [members, setMembers] = useState([]); // 초기값: 빈 배열
     
     useEffect(() => {
@@ -251,7 +252,62 @@ function Main() {
         .catch(err => console.error('load members failed:', err));
     }, []);
 
-    const handleClothSave = () => scheduleCapture("cloth");
+    // 옷사진 선택
+    const handleFileUpload = async (event) => {
+        const file = event.target.files?.[0];
+        
+        if (!file) {
+            console.log("[프론트] 파일 선택 취소됨");
+            return;
+        }
+
+        console.log(`[프론트] 파일 선택: ${file.name}, 크기: ${file.size} bytes`);
+
+        try {
+            setUploading(true);
+
+            // 파일을 Base64로 변환
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                const base64Data = e.target.result;
+                
+                console.log(`[프론트] Base64 변환 완료: ${base64Data.length} bytes`);
+
+                // ✅ AnalysisLoading 페이지로 이동만 함 (분석은 안 함)
+                navigate('/analysis', { 
+                    state: { 
+                        image: base64Data,  // 분석할 이미지 데이터
+                        filename: file.name
+                    } 
+                });
+                
+                setUploading(false);
+            };
+
+            reader.onerror = (error) => {
+                console.error(`[프론트] 파일 읽기 에러:`, error);
+                alert("파일 읽기 실패");
+                setUploading(false);
+            };
+
+            reader.readAsDataURL(file);
+
+        } catch (e) {
+            console.error(e);
+            alert("에러 발생");
+            setUploading(false);
+        }
+    };
+    
+
+    // 옷저장 버튼 클릭
+    const handleClothSave = () => {
+        console.log("[프론트] 옷저장 버튼 클릭");
+        fileInputRef.current?.click(); // 숨겨진 input 클릭
+    };
+
+    // const handleClothSave = () => scheduleCapture("cloth");
     const handleStartFit = () => scheduleCapture("fit");
 
     return (
@@ -390,6 +446,16 @@ function Main() {
                 {/* {members.map((m, i) => (
                     <li key={i}>{m}</li>
                 ))} */}
+
+                {/* 숨겨진 파일 입력 (옷인식용) */}
+                {/* <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    // style={{ display: "none" }}
+                /> */}
+
                 {/* 버튼: 가운데 정렬 */}
                 <div className="mt-3 d-flex justify-content-center gap-3">
                 <Button
@@ -400,14 +466,25 @@ function Main() {
                 >
                     질문하기
                 </Button>
-                <Button
-                    variant="primary"
-                    onClick={handleClothSave}
-                    disabled={!isRunning || !!timerRef.current || uploading}
-                    className="px-4 py-2"
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    style={{ display: "none" }}
+                    id="clothFileInput"
+                    disabled={isRunning && !timerRef.current && !uploading}
+                />
+                <label
+                    htmlFor="clothFileInput"
+                    className="btn btn-primary px-4 py-2"
+                    style={{
+                        cursor: "pointer",
+                        marginBottom: 0,
+                    }}
                 >
                     옷저장
-                </Button>
+                </label>
                 <Button
                     variant="warning"
                     onClick={handleStartFit}
