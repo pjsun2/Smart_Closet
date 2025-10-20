@@ -4,6 +4,7 @@ from config import Config
 from db_ import db, init_db
 from routes.users import users_bp
 from routes.member_test import members_bp
+from chat.langspeech_openai_chroma import chat_bp
 from routes.clothes import clothes_bp, initialize_models
 import os
 
@@ -20,6 +21,7 @@ def create_app():
     # 사용
     app.register_blueprint(members_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(chat_bp)
     app.register_blueprint(clothes_bp)
 
     app.config.from_object(Config)
