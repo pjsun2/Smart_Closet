@@ -10,3 +10,5 @@ back/clothes/원피스_specialist_model
 
 *.pyc
 __pycache__/
+
+tts_outputs/

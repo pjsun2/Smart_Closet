@@ -10,14 +10,18 @@ from langchain_chroma import Chroma
 from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_core.documents import Document
 from typing import List, Optional
+from flask import Blueprint, jsonify, request, send_file
+from werkzeug.utils import secure_filename
 
 import json
 import os
 import playsound
 import asyncio
 import edge_tts
+import uuid
 
 load_dotenv(override=True)
+chat_bp = Blueprint("chat", __name__, url_prefix="/api/voice")
 
 # 출력 스키마 정의
 class FashionRecommendation(BaseModel):
@@ -217,7 +221,6 @@ class FashionAssistant:
         
         return result
 
-
 # 구글 STT
 def get_audio():
     r = sr.Recognizer()
@@ -233,6 +236,8 @@ def get_audio():
             
         return said
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+OUT_DIR = os.path.join(BASE_DIR, "tts_outputs")
 
 # edge tts
 def speak_edge(answer, voice="ko-KR-SoonBokNeural", rate="+8%", pitch="+5Hz"):
@@ -241,6 +246,11 @@ def speak_edge(answer, voice="ko-KR-SoonBokNeural", rate="+8%", pitch="+5Hz"):
     - rate: 속도 ('+20%', '-10%' 등)
     - pitch: 피치 ('+5Hz', '-3Hz' 등)
     """
+    
+    os.makedirs(OUT_DIR, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}.mp3"
+    filepath = os.path.join(OUT_DIR, filename)
+    
     async def _run_tts():
         filename = "voice.mp3"
         communicate = edge_tts.Communicate(
@@ -249,11 +259,71 @@ def speak_edge(answer, voice="ko-KR-SoonBokNeural", rate="+8%", pitch="+5Hz"):
             rate=rate,
             pitch=pitch
         )
-        await communicate.save(filename)
-        playsound.playsound(filename)
-        os.remove(filename)
+        await communicate.save(filepath)
 
+        # playsound.playsound(filename)
+        # os.remove(filename)
+        
     asyncio.run(_run_tts())
+    return filename
+
+# stt post 결과 보내기
+@chat_bp.route("/stt", methods=["POST"])
+def get_audio_text():
+    data = request.get_json(silent=True) or {}
+    text = data.get("text", "")
+    
+    # 패션어시스턴트 초기화
+    assistant = FashionAssistant(persist_directory="./fashion_chroma_db")
+    
+    # 챗봇 답변
+    result = assistant.chat_answer(data)
+    
+    # 결과 추출
+    keywords = result.get("키워드", [])
+    styles = result.get("스타일", [])
+    text = result.get("추천문구", "")
+
+    # tts 변환
+    filename = speak_edge(text)
+    
+    return jsonify({"ok": True, "keywords": keywords, 
+                    "styles": styles, "text": text,
+                    "tts_url": f"/api/voice/tts/{filename}"})
+
+# tts 결과 get으로 보내기
+@chat_bp.route("/tts/<path:filename>", methods=["GET"])
+def serve_tts(filename):
+        # 보안 처리
+    safe_name = secure_filename(filename)
+    path = os.path.join(OUT_DIR, safe_name)
+
+    if not (safe_name and os.path.exists(path)):
+        return jsonify({"ok": False, "error": "file not found"}), 404
+
+    # 파일 전송
+    resp = send_file(
+        path,
+        mimetype="audio/mpeg",
+        as_attachment=False,
+        download_name=safe_name,
+        conditional=True,  # Range 요청 등 지원
+        etag=False,
+        last_modified=None,
+        max_age=0
+    )
+    # 캐시 방지
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+
+    # 전송이 끝난 뒤 파일 삭제 (Windows 포함 안전)
+    @resp.call_on_close
+    def _cleanup():
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+
+    return resp
 
 
 if __name__ == "__main__":
@@ -264,7 +334,8 @@ if __name__ == "__main__":
     # user_text = get_audio()
     
     # 테스트용 텍스트 입력
-    user_text = "결혼 하객룩으로 추천해줘"
+    # user_text = "결혼 하객룩으로 추천해줘"
+    user_text = get_audio_text # 리액트에서 받아온 user 음성 text
     print(f"사용자: {user_text}\n")
     
     # 챗봇 답변 생성
