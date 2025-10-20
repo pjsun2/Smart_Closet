@@ -50,6 +50,7 @@ function Main() {
     }, []);
 
 
+    // 실시간 카메라 실행
     const startCamera = async () => {
         try {
             if (videoRef.current) {
@@ -88,6 +89,7 @@ function Main() {
         }
     };
 
+    // 카메라 정지버튼
     const stopCamera = () => {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach((t) => t.stop());
@@ -234,23 +236,21 @@ function Main() {
     //     load();
     // }, []);
 
-    //
-
-    const [members, setMembers] = useState([]); // 초기값: 빈 배열
+    // const [members, setMembers] = useState([]); // 초기값: 빈 배열
     
-    useEffect(() => {
-        fetch('/api/members')
-        .then(res => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-        })
-        .then(data => {
-            console.log('api/members response:', data);
-            const members = Array.isArray(data?.members) ? data.members : [];
-            setMembers(members);
-        })
-        .catch(err => console.error('load members failed:', err));
-    }, []);
+    // useEffect(() => {
+    //     fetch('/api/members')
+    //     .then(res => {
+    //         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    //         return res.json();
+    //     })
+    //     .then(data => {
+    //         console.log('api/members response:', data);
+    //         const members = Array.isArray(data?.members) ? data.members : [];
+    //         setMembers(members);
+    //     })
+    //     .catch(err => console.error('load members failed:', err));
+    // }, []);
 
     // 옷사진 선택
     const handleFileUpload = async (event) => {
@@ -310,13 +310,92 @@ function Main() {
     // const handleClothSave = () => scheduleCapture("cloth");
     const handleStartFit = () => scheduleCapture("fit");
 
+    // tts ver2
+    const [voicetext, setvoicetext] = useState(""); // 음성 text 변환 저장
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef(null);
+
+    const handleStart = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if(!SpeechRecognition) {
+            alert("이 브라우저는 음성 인식을 지원하지 않습니다.");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = "ko-KR"; // 한국어
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 3;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+            setvoicetext("")
+        }
+
+        recognition.onresult = (event) => {
+            const result = event.results[0][0].transcript;
+            setvoicetext(result);
+            if(result) postText(result)
+            console.log("인식 결과:", result);
+        };
+
+        recognition.onerror = (event) => {
+            console.error("인식 오류:", event.error);
+            setIsListening(false);
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+    }
+    
+    // 챗봇 결과 가져오는 post
+    const postText = async (txt) => {
+        try {
+            const res = await fetch("/api/voice/stt", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: txt })
+            });
+            if(!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            console.log(data);
+            if (data.tts_url) {
+                // 1) 그냥 URL로 재생 (재생 동안 서버가 파일을 전송하고, 전송 후 삭제)
+                // const audio = new Audio(data.tts_url);
+                // audio.play();
+
+                // 2) 안전하게 blob으로 받아 캐시(로컬에 보관) 후 재생 (URL이 삭제되어도 재생 가능)
+                const aRes = await fetch(data.tts_url, { method: "GET" });
+                if (!aRes.ok) throw new Error(`TTS HTTP ${aRes.status}`);
+                const blob = await aRes.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const audio = new Audio(blobUrl);
+                audio.play();
+                // 재생 끝나고 URL 해제
+                audio.onended = () => URL.revokeObjectURL(blobUrl);
+            }
+        } catch(e) {
+            console.log(e);
+        }
+    }
+
+    const handleStop = () => {
+        recognitionRef.current?.stop();
+        setIsListening(false);
+    };
+
     return (
         <>
         {/* 전체 화면 꽉 채우고 스크롤 금지 */}
         <Container
             fluid
             className="d-flex flex-column justify-content-center align-items-center"
-            style={{ height: "108svh", overflow: "hidden" }}
+            style={{ height: "105svh", overflow: "hidden" }}
         >
             <Row className="w-100 justify-content-center" style={{ maxWidth: 1200 }}>
             <Col xs={12} sm={10} md={8} lg={5} className="d-flex flex-column align-items-stretch">
@@ -429,8 +508,10 @@ function Main() {
                             {isRunning
                             ? pendingAction
                                 ? `⏳ ${countdown}초 뒤 자동 캡처 (${pendingAction === "cloth" ? "옷저장" : "입어보기"})`
+                                    
                                 : "🎥 실시간 촬영 중"
                             : "대기 중"}
+                            
                             {uploading ? " (업로드 중...)" : ""}
                         </span>
                         <div className="d-flex align-items-center gap-1">
@@ -459,12 +540,11 @@ function Main() {
                 {/* 버튼: 가운데 정렬 */}
                 <div className="mt-3 d-flex justify-content-center gap-3">
                 <Button
-                    variant="danger"
-                    // onClick={startCamera}
-                    disabled={isRunning || uploading}
+                    variant={isListening ? "warning": "danger"}
+                    onClick={isListening ? handleStop : handleStart}
                     className="px-4 py-2"
                 >
-                    질문하기
+                    {isListening ? "인식중지" : "질문하기"}
                 </Button>
                 <input
                     ref={fileInputRef}
@@ -501,7 +581,7 @@ function Main() {
                     정지
                 </Button>
                 </div>
-                
+                {/* {voicetext} */}
                 {/* 캡처 미리보기 & 서버 경로 */}
                 {/* {shot && (
                 <div className="mt-3 text-center">
