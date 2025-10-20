@@ -17,3 +17,4 @@ __pycache__/
 
 tts_outputs/
 fashion_chroma_db/
+instance/
