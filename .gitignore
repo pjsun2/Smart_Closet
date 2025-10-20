@@ -1,5 +1,6 @@
 .env
 .venv312
+.venv
 
 back/clothes/runs
 back/clothes/router_model
@@ -8,7 +9,11 @@ back/clothes/하의_specialist_model
 back/clothes/아우터_specialist_model
 back/clothes/원피스_specialist_model
 
+back/uploads/clothes
+back/instance
+
 *.pyc
 __pycache__/
 
 tts_outputs/
+fashion_chroma_db/

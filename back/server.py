@@ -5,7 +5,11 @@ from db_ import db, init_db
 from routes.users import users_bp
 from routes.member_test import members_bp
 from chat.langspeech_openai_chroma import chat_bp
+from routes.clothes import clothes_bp, initialize_models
 import os
+
+# CUDA 비활성화 (CPU만 사용)
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -18,6 +22,7 @@ def create_app():
     app.register_blueprint(members_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(chat_bp)
+    app.register_blueprint(clothes_bp)
 
     app.config.from_object(Config)
     os.makedirs(app.instance_path, exist_ok=True)
@@ -35,4 +40,13 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
+
+    # 모델 초기화
+    print("\n[server.py] AI 모델 초기화 중...")
+    try:
+        initialize_models()
+        print("[server.py] AI 모델 초기화 완료\n")
+    except Exception as e:
+        print("[server.py] 모델 초기화 오류: " + str(e) + "\n")
+
     app.run(debug=True, port=5000)
