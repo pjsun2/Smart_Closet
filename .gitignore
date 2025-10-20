@@ -1,6 +1,7 @@
 .env
 .venv312
 .venv
+.md
 
 back/clothes/runs
 back/clothes/router_model
