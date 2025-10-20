@@ -20,6 +20,13 @@ function Main() {
     const [countdown, setCountdown] = useState(0); // 5 → 0 카운트다운
     const [pendingAction, setPendingAction] = useState(null); // 'cloth' | 'fit' | null ai모델 여부
 
+    // 실시간 가상 피팅 관련 상태
+    const [isFittingMode, setIsFittingMode] = useState(false); // 가상 피팅 모드
+    const [fittingFrame, setFittingFrame] = useState(null); // 처리된 피팅 프레임
+    const fittingIntervalRef = useRef(null); // 피팅 프레임 전송 인터벌
+    const [showSkeleton, setShowSkeleton] = useState(true); // 스켈레톤 표시
+    const [useWarp, setUseWarp] = useState(true); // 관절 매칭 사용
+
     // 스크롤 차단
     useEffect(() => {
         const prevHtmlOverflow  = document.documentElement.style.overflow;
@@ -139,7 +146,9 @@ function Main() {
             // if (action === 'cloth') await uploadToServer(dataUrl, '/api/cloth');
             // cloth 옷인식하여 데이터베이스에 저장하는 백엔드 연동 툴, 옷인식 버튼 클릭시 5초후 저장하고 썸네일 저장
 
-            // if (action === 'fit')   await uploadToServer(dataUrl, '/api/fit');
+            if (action === 'fit') {
+                await uploadToFitServer(dataUrl);
+            }
             // fit 옷 피팅하는 백엔드 연동 툴, 옷피팅 버튼 클릭시 5초후 저장하고 썸네일 저장
             
             setPendingAction(null);
@@ -197,6 +206,67 @@ function Main() {
         v?.addEventListener("loadedmetadata", onMeta);
         return () => v?.removeEventListener("loadedmetadata", onMeta);
     }, []);
+
+    // 입어보기 - 캡처한 이미지를 서버로 전송하고 main.py 실행
+    const uploadToFitServer = async (dataUrl) => {
+        try {
+            setUploading(true);
+            setServerPath(null);
+
+            console.log("[프론트] 입어보기 이미지 업로드 시작");
+
+            // AbortController로 타임아웃 설정 (5분)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5분
+
+            try {
+                // Base64 데이터를 JSON으로 전송
+                const res = await fetch("/api/fit", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        image: dataUrl
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!res.ok) {
+                    throw new Error(`Upload failed: ${res.status}`);
+                }
+
+                const json = await res.json();
+                console.log("[프론트] 입어보기 처리 응답:", json);
+                
+                if (json.success) {
+                    if (json.status === "processing") {
+                        alert("입어보기 처리를 시작했습니다!\n처리가 완료될 때까지 잠시만 기다려주세요.");
+                    } else {
+                        alert("입어보기 처리가 완료되었습니다!");
+                    }
+                    setServerPath(json.model_path || null);
+                } else {
+                    alert("입어보기 처리 중 오류가 발생했습니다.");
+                }
+            } catch (fetchError) {
+                clearTimeout(timeoutId);
+                
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('요청 시간이 초과되었습니다 (5분)');
+                }
+                throw fetchError;
+            }
+
+        } catch (e) {
+            console.error("[프론트] 입어보기 업로드 실패:", e);
+            alert("입어보기 업로드 실패: " + e.message);
+        } finally {
+            setUploading(false);
+        }
+    };
 
   // const uploadToServer = async (dataUrl) => {
   //   try {
@@ -301,14 +371,105 @@ function Main() {
     };
     
 
-    // 옷저장 버튼 클릭
+    // 옷 인식 버튼 클릭
     const handleClothSave = () => {
-        console.log("[프론트] 옷저장 버튼 클릭");
+        console.log("[프론트] 옷 인식 버튼 클릭");
         fileInputRef.current?.click(); // 숨겨진 input 클릭
     };
 
     // const handleClothSave = () => scheduleCapture("cloth");
-    const handleStartFit = () => scheduleCapture("fit");
+    
+    // ========== 실시간 가상 피팅 기능 ==========
+    
+    // 실시간 피팅 프레임 전송 및 처리
+    const sendFittingFrame = async () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        
+        try {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            
+            const w = video.videoWidth || 1280;
+            const h = video.videoHeight || 720;
+            
+            canvas.width = w;
+            canvas.height = h;
+            
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, w, h);
+            
+            const frameData = canvas.toDataURL("image/jpeg", 0.8);
+            
+            // 서버로 프레임 전송
+            const response = await fetch("/api/fit/stream", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    frame: frameData,
+                    showSkeleton: showSkeleton,
+                    useWarp: useWarp
+                })
+            });
+            
+            if (!response.ok) {
+                console.error("[프론트] 피팅 프레임 처리 실패:", response.status);
+                return;
+            }
+            
+            const result = await response.json();
+            
+            if (result.success && result.frame) {
+                setFittingFrame(result.frame);
+            }
+            
+        } catch (error) {
+            console.error("[프론트] 피팅 프레임 전송 오류:", error);
+        }
+    };
+    
+    // 가상 피팅 시작
+    const startVirtualFitting = () => {
+        console.log("[프론트] 가상 피팅 시작");
+        setIsFittingMode(true);
+        
+        // 실시간 프레임 전송 시작 (200ms 간격)
+        fittingIntervalRef.current = setInterval(() => {
+            sendFittingFrame();
+        }, 200);
+    };
+    
+    // 가상 피팅 중지
+    const stopVirtualFitting = () => {
+        console.log("[프론트] 가상 피팅 중지");
+        setIsFittingMode(false);
+        setFittingFrame(null);
+        
+        if (fittingIntervalRef.current) {
+            clearInterval(fittingIntervalRef.current);
+            fittingIntervalRef.current = null;
+        }
+    };
+    
+    // 입어보기 버튼 클릭 (실시간 가상 피팅)
+    const handleStartFit = () => {
+        if (isFittingMode) {
+            stopVirtualFitting();
+        } else {
+            startVirtualFitting();
+        }
+    };
+    
+    // 가상 피팅용 옷 이미지 업로드
+    // 컴포넌트 언마운트 시 정리
+    useEffect(() => {
+        return () => {
+            if (fittingIntervalRef.current) {
+                clearInterval(fittingIntervalRef.current);
+            }
+        };
+    }, []);
 
     // tts ver2
     const [voicetext, setvoicetext] = useState(""); // 음성 text 변환 저장
@@ -425,12 +586,49 @@ function Main() {
                             objectFit: "cover",
                             objectPosition: "center center",
                             borderRadius: 16,
-                            display: "block",
+                            display: isFittingMode ? "none" : "block", // 피팅 모드에서는 숨김
                             transform: "scaleX(-1)",
                         }}
                     />
+                    
+                    {/* 실시간 가상 피팅 결과 */}
+                    {isFittingMode && fittingFrame && (
+                        <img
+                            src={fittingFrame}
+                            alt="Virtual Fitting"
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                objectPosition: "center center",
+                                borderRadius: 16,
+                                display: "block",
+                                transform: "scaleX(-1)",
+                            }}
+                        />
+                    )}
+                    
+                    {/* 피팅 모드 표시 */}
+                    {isFittingMode && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: 10,
+                                left: 10,
+                                background: "rgba(0, 255, 0, 0.7)",
+                                color: "white",
+                                padding: "8px 16px",
+                                borderRadius: 8,
+                                fontWeight: "bold",
+                                fontSize: "14px",
+                            }}
+                        >
+                            🎽 가상 피팅 중...
+                        </div>
+                    )}
+                    
                     {/* 캡처된 썸네일 오버레이 */}
-                    {shot && (
+                    {shot && !isFittingMode && (
                     <div
                         style={{
                         position: "absolute",
@@ -505,9 +703,11 @@ function Main() {
                     >
                         <div className="d-flex align-items-center justify-content-between">
                         <span>
-                            {isRunning
+                            {isFittingMode
+                            ? "🎽 실시간 가상 피팅 활성화"
+                            : isRunning
                             ? pendingAction
-                                ? `⏳ ${countdown}초 뒤 자동 캡처 (${pendingAction === "cloth" ? "옷저장" : "입어보기"})`
+                                ? `⏳ ${countdown}초 뒤 자동 캡처 (${pendingAction === "cloth" ? "옷 인식" : "입어보기"})`
                                     
                                 : "🎥 실시간 촬영 중"
                             : "대기 중"}
@@ -563,15 +763,16 @@ function Main() {
                         marginBottom: 0,
                     }}
                 >
-                    옷저장
+                    옷 인식
                 </label>
+                
                 <Button
-                    variant="warning"
+                    variant={isFittingMode ? "success" : "warning"}
                     onClick={handleStartFit}
-                    disabled={!isRunning || !!timerRef.current || uploading}
+                    disabled={!isRunning || uploading}
                     className="px-4 py-2"
                 >
-                    입어보기
+                    {isFittingMode ? "피팅 중지" : "입어보기"}
                 </Button>
                 <Button
                     variant="secondary"

@@ -8,8 +8,19 @@ from chat.langspeech_openai_chroma import chat_bp
 from routes.clothes import clothes_bp, initialize_models
 import os
 
-# CUDA 비활성화 (CPU만 사용)
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+# GPU 활성화 - CUDA 사용
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # CPU 모드 (비활성화)
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # GPU 0번 사용
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'  # GPU 메모리 동적 할당
+
+# OpenCV CUDA 활성화 (pip 버전은 CUDA 미지원이지만 설정)
+os.environ['OPENCV_ENABLE_CUDA'] = '1'
+
+# MediaPipe GPU 설정
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '0'  # GPU 활성화
+
+# ONNX Runtime GPU 설정 (rembg 배경 제거에 사용)
+os.environ['ORT_CUDA_UNAVAILABLE'] = '0'  # CUDA 사용 가능 표시
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
