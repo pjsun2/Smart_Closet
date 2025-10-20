@@ -21,23 +21,23 @@ function Main() {
     const [pendingAction, setPendingAction] = useState(null); // 'cloth' | 'fit' | null ai모델 여부
 
     // 스크롤 차단
-    useEffect(() => {
-        const prevHtmlOverflow  = document.documentElement.style.overflow;
-        const prevBodyOverflow  = document.body.style.overflow;
-        const prevBodyHeight    = document.body.style.height;
+    // useEffect(() => {
+    //     const prevHtmlOverflow  = document.documentElement.style.overflow;
+    //     const prevBodyOverflow  = document.body.style.overflow;
+    //     const prevBodyHeight    = document.body.style.height;
 
-        document.documentElement.style.overflow = "hidden";
-        document.body.style.overflow = "hidden";
-        document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
+    //     document.documentElement.style.overflow = "hidden";
+    //     document.body.style.overflow = "hidden";
+    //     document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
 
-        return () => {
-            document.documentElement.style.overflow = prevHtmlOverflow;
-            document.body.style.overflow = prevBodyOverflow;
-            document.body.style.height   = prevBodyHeight;
-            cleanupTimers();
-            stopCamera();
-        };
-    }, []);
+    //     return () => {
+    //         document.documentElement.style.overflow = prevHtmlOverflow;
+    //         document.body.style.overflow = prevBodyOverflow;
+    //         document.body.style.height   = prevBodyHeight;
+    //         cleanupTimers();
+    //         stopCamera();
+    //     };
+    // }, []);
 
     const cameraFrame = {
         background: "linear-gradient(45deg, #667eea 0%, #764ba2 100%)",
@@ -300,11 +300,81 @@ function Main() {
         }
     };
     
+    // 옷저장 전용 함수
+    const uploadClothes = async () => {
+        console.log("[프론트] 옷저장 시작");
+
+        if (uploading || timerRef.current) {
+            console.log("[프론트] 진행 중 - 무시");
+            return;
+        }
+
+        if (!isRunning) {
+            await startCamera();
+        }
+
+        cleanupTimers();
+        setShot(null);
+        setUploading(true);
+        setPendingAction("cloth");
+        setCountdown(5);
+
+        intervalRef.current = setInterval(() => {
+            setCountdown((sec) => {
+                if (sec <= 1) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                    return 0;
+                }
+                return sec - 1;
+            });
+        }, 1000);
+
+        timerRef.current = setTimeout(async () => {
+            timerRef.current = null;
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+
+            try {
+                const dataUrl = captureFrame();
+                if (!dataUrl) throw new Error("캡처 실패");
+
+                const blob = dataURLtoBlob(dataUrl);
+                const filename = `cloth_${Date.now()}.jpg`;
+
+                const form = new FormData();
+                form.append("file", blob, filename);
+
+                console.log("[프론트] 서버 전송 시작...");
+                const res = await fetch("/api/clothes", { method: "POST", body: form });
+                const json = await res.json();
+                console.log("[프론트] 서버 응답:", json);
+
+                if (!res.ok || !json.success) {
+                    throw new Error(json.error || json.message || "분석 실패");
+                }
+
+                navigate("/analysis", {
+                    state: { image: dataUrl, filename, result: json },
+                });
+            } catch (error) {
+                console.error("[프론트] 옷저장 실패:", error);
+                alert("옷저장 실패: " + error.message);
+            } finally {
+                setUploading(false);
+                setPendingAction(null);
+                setCountdown(0);
+                cleanupTimers();
+            }
+        }, 5000);
+    };
 
     // 옷저장 버튼 클릭
     const handleClothSave = () => {
         console.log("[프론트] 옷저장 버튼 클릭");
-        fileInputRef.current?.click(); // 숨겨진 input 클릭
+        uploadClothes();
     };
 
     // const handleClothSave = () => scheduleCapture("cloth");
@@ -447,15 +517,6 @@ function Main() {
                     <li key={i}>{m}</li>
                 ))} */}
 
-                {/* 숨겨진 파일 입력 (옷인식용) */}
-                {/* <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    // style={{ display: "none" }}
-                /> */}
-
                 {/* 버튼: 가운데 정렬 */}
                 <div className="mt-3 d-flex justify-content-center gap-3">
                 <Button
@@ -466,7 +527,15 @@ function Main() {
                 >
                     질문하기
                 </Button>
-                <input
+                <Button
+                    variant="primary"
+                    onClick={handleClothSave}
+                    disabled={uploading || !!timerRef.current}
+                    className="px-4 py-2"
+                >
+                    옷저장
+                </Button>
+                {/* <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
@@ -484,7 +553,7 @@ function Main() {
                     }}
                 >
                     옷저장
-                </label>
+                </label> */}
                 <Button
                     variant="warning"
                     onClick={handleStartFit}

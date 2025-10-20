@@ -9,70 +9,48 @@ function AnalysisLoading() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const base64Image = location.state?.image;
-        const filename = location.state?.filename;
-        
-        if (!base64Image) {
+        // ✅ 이미 분석된 결과를 받아옴 (다시 분석 안 함!)
+        const { image, filename, result } = location.state ?? {};
+
+        console.log("[AnalysisLoading] 데이터 수신:", { image: !!image, filename, result });
+
+        if (!image || !result) {
+            console.log("[AnalysisLoading] 데이터 없음 - 홈으로 이동");
             navigate('/');
             return;
         }
-        
-        // ✅ 분석 시작
-        performAnalysis(base64Image, filename);
-        
-    }, [location, navigate]);
 
-    const performAnalysis = async (base64Image, filename) => {
-        try {
-            setProgress(10);
-            console.log("[프론트] 분석 시작: " + filename);
-            
-            // ✅ 백엔드에 이미지 전송하여 분석 실행
-            const res = await fetch("/api/clothes", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    image: base64Image,
-                }),
-            });
+        // ✅ 진행률 애니메이션
+        setProgress(30);
 
-            setProgress(50);
-            console.log(`[프론트] 서버 응답 상태: ${res.status}`);
-
-            if (!res.ok) {
-                throw new Error(`분석 실패: ${res.status}`);
-            }
-
-            const json = await res.json();
-            console.log(`[프론트] 분석 완료:`, json);
-
-            // ✅ 감지된 옷이 없는 경우 처리
-            if (!json.detected || json.detected.length === 0) {
-                alert("❌ 옷을 감지하지 못했습니다.\n옷 사진을 다시 선택해주세요.");
-                navigate('/');
-                return;
-            }
-
-            setProgress(100);
-
-            // ✅ 분석 완료 후 Result 페이지로 이동
-            setTimeout(() => {
-                navigate('/result', { 
-                    state: { 
-                        detected: json.detected,
-                        filename: json.filename
-                    } 
-                });
-            }, 500);
-
-        } catch (e) {
-            console.error(`[프론트] 분석 에러:`, e);
-            setError(e.message);
+        // ✅ 분석 결과 확인
+        if (!result.success || !result.detected?.length) {
+            console.error("[AnalysisLoading] 분석 실패:", result.error);
+            setError(result.error || "옷을 감지하지 못했습니다.");
             setProgress(0);
+            return;
         }
-    };
+
+        console.log("[AnalysisLoading] 분석 성공! 감지된 옷:", result.detected.length);
+
+        // ✅ 500ms 후 Result 페이지로 이동
+        const timer = setTimeout(() => {
+            setProgress(100);
+            console.log("[AnalysisLoading] Result 페이지로 이동");
+            
+            navigate('/result', {
+                state: {
+                    detected: result.detected,
+                    filename,
+                    image,
+                    analysis: result.analysis,
+                    backendPath: result.path
+                }
+            });
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [location, navigate]);
 
     if (error) {
         return (
