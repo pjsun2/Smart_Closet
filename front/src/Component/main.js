@@ -693,7 +693,7 @@ function Main() {
                                 fontSize: "14px",
                             }}
                         >
-                            🎽 가상 피팅 중...
+                            가상 피팅 중...
                         </div>
                     )}
                     
@@ -774,12 +774,12 @@ function Main() {
                         <div className="d-flex align-items-center justify-content-between">
                         <span>
                             {isFittingMode
-                            ? "🎽 실시간 가상 피팅 활성화"
+                            ? "실시간 가상 피팅 활성화"
                             : isRunning
                             ? pendingAction
                                 ? `⏳ ${countdown}초 뒤 자동 캡처 (${pendingAction === "cloth" ? "옷 인식" : "입어보기"})`
                                     
-                                : "🎥 실시간 촬영 중"
+                                : "실시간 촬영 중"
                             : "대기 중"}
                             
                             {uploading ? " (업로드 중...)" : ""}

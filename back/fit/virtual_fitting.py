@@ -21,13 +21,13 @@ def check_gpu_availability():
     try:
         import torch
         if torch.cuda.is_available():
-            print(f"[GPU] ✅ CUDA 사용 가능")
+            print(f"[GPU] [OK] CUDA 사용 가능")
             print(f"[GPU] GPU 개수: {torch.cuda.device_count()}")
             print(f"[GPU] GPU 이름: {torch.cuda.get_device_name(0)}")
         else:
-            print("[GPU] ❌ CUDA 사용 불가 (CPU 모드)")
+            print("[GPU] [FAIL] CUDA 사용 불가 (CPU 모드)")
     except ImportError:
-        print("[GPU] ⚠️ PyTorch 미설치 (CUDA 확인 불가)")
+        print("[GPU] [WARNING] PyTorch 미설치 (CUDA 확인 불가)")
     
     # OpenCV CUDA 확인
     print(f"[GPU] OpenCV 버전: {cv2.__version__}")
@@ -84,11 +84,11 @@ class VirtualFitting:
         try:
             import torch
             if torch.cuda.is_available():
-                print(f"[Virtual Fitting] ✅ GPU 모드 활성화 ({torch.cuda.get_device_name(0)})")
+                print(f"[Virtual Fitting] [OK] GPU 모드 활성화 ({torch.cuda.get_device_name(0)})")
                 return True
         except:
             pass
-        print("[Virtual Fitting] ⚠️ CPU 모드로 실행")
+        print("[Virtual Fitting] [WARNING] CPU 모드로 실행")
         return False
     
     def load_cloth(self):

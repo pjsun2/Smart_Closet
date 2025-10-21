@@ -102,20 +102,20 @@ print("[5] 즉시 적용 가능한 GPU 사용률 향상 방법:")
 print("="*70)
 
 print("""
-🎯 우선순위 1: 프레임 전송 간격 줄이기 (즉시 효과)
+[PRIORITY 1] 프레임 전송 간격 줄이기 (즉시 효과)
    - front/src/Component/main.js의 200ms를 100ms로 변경
-   - 예상 GPU 사용률: 30% → 50-60%
+   - 예상 GPU 사용률: 30% -> 50-60%
    - 부작용: 네트워크 부하 증가, CPU 사용률 증가
 
-🎯 우선순위 2: model_complexity 유지 (이미 최적화됨)
+[PRIORITY 2] model_complexity 유지 (이미 최적화됨)
    - 현재 model_complexity=2 유지
    - GPU를 최대한 활용하는 설정
    
-🎯 우선순위 3: 해상도 증가 (GPU 부하 증가)
+[PRIORITY 3] 해상도 증가 (GPU 부하 증가)
    - 더 높은 해상도로 처리하면 GPU 사용률 증가
    - 하지만 실시간성 저하 가능성
 
-⚠️  장기 과제: OpenCV CUDA 빌드
+[WARNING] 장기 과제: OpenCV CUDA 빌드
    - Windows에서 OpenCV를 CUDA 옵션으로 소스 빌드
    - 매우 복잡하고 시간 소모적
    - 현재 설정으로도 충분한 성능 제공
