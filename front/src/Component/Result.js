@@ -6,7 +6,7 @@ function Result() {
     const location = useLocation();
     const navigate = useNavigate();
     const detected = location.state?.detected;
-    const imagePath = location.state?.imagePath;
+    const image = location.state?.image;
 
     const getClothingIcon = (category) => {
         const icons = {
@@ -99,13 +99,13 @@ function Result() {
             </div>
 
             {/* 업로드된 이미지 표시 */}
-            {imagePath && (
+            {image && (
                 <Row className="mb-5">
                     <Col md={8} className="mx-auto">
                         <Card className="image-preview-card shadow-sm">
                             <Card.Body className="p-0">
                                 <img 
-                                    src={imagePath} 
+                                    src={image}
                                     alt="업로드된 사진"
                                     style={{
                                         width: '100%',
@@ -115,7 +115,7 @@ function Result() {
                                         borderRadius: '8px'
                                     }}
                                     onError={(e) => {
-                                        console.error('이미지 로드 실패:', imagePath);
+                                        console.error('이미지 로드 실패:', image);
                                         e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3Ctext x="50%" y="50%" font-size="16" fill="%23999" text-anchor="middle" dy=".3em"%3E이미지를 불러올 수 없습니다%3C/text%3E%3C/svg%3E';
                                     }}
                                 />

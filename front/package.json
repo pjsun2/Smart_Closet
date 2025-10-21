@@ -16,8 +16,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "flask": "cross-env CUDA_VISIBLE_DEVICES=-1 python ../back/server.py",
-    "start": "cross-env HTTPS=false HOST=0.0.0.0 PORT=3000 react-scripts start",
+    "flask": "cross-env CUDA_VISIBLE_DEVICES=-1 PYTHONPATH=.. python ../back/server.py",
+    "start": "cross-env HTTPS=true SSL_CRT_FILE=certs/dev.crt SSL_KEY_FILE=certs/dev.key HOST=0.0.0.0 PORT=3000 react-scripts start",
     "dev": "concurrently -k -n FRONT,API -c blue,green \"npm:start\" \"npm:flask\"",
     "build": "react-scripts build",
     "test": "react-scripts test",
