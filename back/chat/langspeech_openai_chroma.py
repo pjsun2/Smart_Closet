@@ -37,7 +37,7 @@ class FashionAssistant:
         
         # LLM 초기화
         self.llm = ChatOpenAI(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             temperature=0.8,
             max_tokens=300,
             api_key=self.api_key
@@ -111,6 +111,7 @@ class FashionAssistant:
             2) 핵심 키워드 5~6개(장소, 상황, 옷 종류 등)와 스타일 3~5개(힙합, 로맨틱, 모던, 클래식 등)를 뽑아.
             3) 키워드와 스타일은 중복 없이 다양하게 선택해.
             4) 짧고 자연스러운 존댓말 추천 문구를 작성해.
+            5) 사용자의 성별은 {gender} 야
 
             {context}
 
@@ -202,7 +203,8 @@ class FashionAssistant:
             result = chain.invoke({
                 "input": user_text,
                 "context": context,
-                "format_instructions": self.parser.get_format_instructions()
+                "format_instructions": self.parser.get_format_instructions(),
+                "gender": ""
             })
         except Exception as e:
             print(f"파싱 오류: {e}")
@@ -212,7 +214,8 @@ class FashionAssistant:
             result = chain_structured.invoke({
                 "input": user_text,
                 "context": context,
-                "format_instructions": ""
+                "format_instructions": "",
+                "gender": ""
             })
             result = result.dict()
         
@@ -252,7 +255,6 @@ def speak_edge(answer, voice="ko-KR-SoonBokNeural", rate="+8%", pitch="+5Hz"):
     filepath = os.path.join(OUT_DIR, filename)
     
     async def _run_tts():
-        filename = "voice.mp3"
         communicate = edge_tts.Communicate(
             answer,
             voice=voice,
@@ -315,7 +317,7 @@ def serve_tts(filename):
     # 캐시 방지
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
 
-    # 전송이 끝난 뒤 파일 삭제 (Windows 포함 안전)
+    # 전송이 끝난 뒤 파일 삭제
     @resp.call_on_close
     def _cleanup():
         try:

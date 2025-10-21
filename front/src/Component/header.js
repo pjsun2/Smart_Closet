@@ -1,9 +1,17 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Button, Container, Row, Col, Navbar } from "react-bootstrap";
+import { Button, Container, Row, Col, Navbar, Offcanvas } from "react-bootstrap";
+import LoginModal from "./login";
+import { useNavigate } from "react-router-dom";
 
 function Header() {
+    const navigate = useNavigate();
     const [wx, setWx] = useState(null);
     const [err, setErr] = useState("");
+    const [open, setOpen] = useState(false);
+
+    const [showLogin, setShowLogin] = useState(false);
+    const [pendingAction, setPendingAction] = useState(null); // 'login' | null
+
     const API = process.env.REACT_APP_OPENWEATHER_KEY;
 
     useEffect(() => {
@@ -83,42 +91,184 @@ function Header() {
     });
 
     return (
-        <Navbar fixed="top" bg="light" className="shadow-sm">
-            <Container fluid className="d-flex justify-content-between align-items-center">
-                {/* 좌측 로고 */}
-                <div className="d-flex align-items-center gap-2">
-                    <img src="/dumirlogo.png" alt="logo" style={{ height: 80 }} />
-                    <h3>Dumir Smart Closet</h3>
-                </div>
-
-                {/* 우측 날씨 */}
-                <div style={{ minWidth: 140, textAlign: "right" }}>
-                {wx ? (
-                    <div className="d-flex align-items-center justify-content-end gap-2">
-                        <div>
-                            <div className="d-flex justify-content-center" style={{ fontWeight: 700, fontSize: 30 }}>
-                                <img
-                                    alt={wx.weather?.[0]?.description || "weather"}
-                                    src={`https://openweathermap.org/img/wn/${wx.weather?.[0]?.icon}@2x.png`}
-                                    style={{ width: 50, height: 50, color:'blue' }}
-                                />
-                                {Math.round(wx.main.temp)}°C
-                            </div>
-                            <div style={{ fontSize: 20 }}>
-                                {wx.name} · {wx.weather?.[0]?.description}
-                            </div>
-                            <div style={{ fontWeight: 700 }}>
-                                {dateStr} {timeStr}
-                            </div>
+        <>
+            <Navbar fixed="top" bg="light" className="shadow-sm">
+                <Container
+                    fluid
+                    className="position-relative d-flex justify-content-between align-items-center"
+                >
+                    <div className="d-flex align-items-center">
+                        <Button
+                            variant="outline-secondary"
+                            size="lg"
+                            className="px-4 py-3 fw-bold "
+                            onClick={() => setOpen(true)}
+                            style={{
+                                all: "unset",
+                                cursor: "pointer",
+                                borderRadius: "12px",
+                                fontSize: "1.1rem",
+                                minWidth: "150px",
+                            }}
+                        >
+                            <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden style={{ marginRight: 6 }}>
+                                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                            </svg>
+                        </Button>
+                    </div>
+                    <div className="position-absolute top-50 start-50 translate-middle text-center">
+                        <div className="d-flex align-items-center gap-2">
+                            <img src="/dumirlogo.png" alt="logo" style={{ height: 64 }} />
+                            <Button
+                                style={{
+                                    all: "unset",
+                                    cursor: "pointer",
+                                }}
+                                onClick={() => {navigate("/")}}
+                            >
+                                <h3 className="mb-0">Dumir Smart Closet</h3>
+                            </Button>
                         </div>
                     </div>
+
+                    {/* 우측: 날씨 */}
+                    <div style={{ minWidth: 140, textAlign: "right" }}>
+                        {wx ? (
+                        <div className="d-flex align-items-center justify-content-end gap-2">
+                            <div>
+                                <div
+                                    className="d-flex justify-content-center"
+                                    style={{ fontWeight: 700, fontSize: 25 }}
+                                >
+                                    <img
+                                        alt={wx.weather?.[0]?.description || "weather"}
+                                        src={`https://openweathermap.org/img/wn/${wx.weather?.[0]?.icon}@2x.png`}
+                                        style={{ width: 20, height: 25 }}
+                                    />
+                                    {Math.round(wx.main.temp)}°C
+                                </div>
+                                <div style={{ fontSize: 20, textAlign: "center" }}>
+                                    {wx.name} · {wx.weather?.[0]?.description}
+                                </div>
+                                <div style={{ fontWeight: 700 }}>
+                                    {dateStr} {timeStr}
+                                </div>
+                            </div>
+                        </div>
+                        ) : (
+                        <small className="text-muted">{err || "날씨 로딩 중…"}</small>
+                        )}
+                    </div>
+                </Container>
+            </Navbar>
+
+            {/* 사이드 오프캔버스 */}
+            <Offcanvas
+                show={open}
+                onHide={() => setOpen(false)}
+                onExited={() => {
+                    // Offcanvas 애니메이션 완전히 끝난 뒤 모달 오픈
+                    if (pendingAction === "login") {
+                        setShowLogin(true);
+                        setPendingAction(null);
+                    }
+                }}
+                placement="start"
+                scroll
+                backdrop
+                style={{
+                    width: "35%"
+                }}
+            >
+                <Offcanvas.Header closeButton style={{marginRight: 15}}>
+                    <Offcanvas.Title>
+                        <img src="/dumirlogo.png" alt="logo" style={{ height: 70, width: 70, marginLeft: 5}} />
+                        {/* <h3 className="mb-0">Dumir Smart Closet</h3> */}
+                    </Offcanvas.Title>
+                </Offcanvas.Header>
+                <hr
+                    style={{
+                        border: "none",
+                        borderTop: "2px solid #000",
+                        margin: "0 0 1rem 0",
+                    }}
+                />
+                <Offcanvas.Body>
+                    <div className="d-grid gap-2">
+                        <Button
+                            size="lg"
+                            onClick={() => {
+                                setPendingAction("login"); // 로그인 의도 기록
+                                setOpen(false);            // 먼저 사이드 패널 닫기
+                            }}
+                        >
+                        로그인
+                        </Button>
+                        {/* <Button
+                            size="lg"
+                            variant="outline-primary"
+                            onClick={() => {
+                                // TODO: 원하는 동작
+                                setOpen(false);
+                            }}
+                        >
+                        코디 추천
+                        </Button> */}
+                        <Button
+                            size="lg"
+                            variant="outline-primary"
+                            onClick={() =>{ 
+                                navigate("/wardrobe");
+                                setOpen(false);
+                            }}
+                        >
+                        옷장 관리
+                        </Button>
+                    </div>
+                </Offcanvas.Body>
+            </Offcanvas>
+            {/* 로그인 모달 */}
+            <LoginModal
+                show={showLogin}
+                onHide={() => setShowLogin(false)}
+            />
+        </>
+        // <Navbar fixed="top" bg="light" className="shadow-sm">
+        //     <Container fluid className="d-flex justify-content-between align-items-center">
+        //         {/* 좌측 로고 */}
+        //         <div className="d-flex align-items-center gap-2">
+        //             <img src="/dumirlogo.png" alt="logo" style={{ height: 80 }} />
+        //             <h3>Dumir Smart Closet</h3>
+        //         </div>
+
+        //         {/* 우측 날씨 */}
+        //         <div style={{ minWidth: 140, textAlign: "right" }}>
+        //         {wx ? (
+        //             <div className="d-flex align-items-center justify-content-end gap-2">
+        //                 <div>
+        //                     <div className="d-flex justify-content-center" style={{ fontWeight: 700, fontSize: 30 }}>
+        //                         <img
+        //                             alt={wx.weather?.[0]?.description || "weather"}
+        //                             src={`https://openweathermap.org/img/wn/${wx.weather?.[0]?.icon}@2x.png`}
+        //                             style={{ width: 50, height: 50, color:'blue' }}
+        //                         />
+        //                         {Math.round(wx.main.temp)}°C
+        //                     </div>
+        //                     <div style={{ fontSize: 20 }}>
+        //                         {wx.name} · {wx.weather?.[0]?.description}
+        //                     </div>
+        //                     <div style={{ fontWeight: 700 }}>
+        //                         {dateStr} {timeStr}
+        //                     </div>
+        //                 </div>
+        //             </div>
                     
-                ) : (
-                    <small className="text-muted">{err || "날씨 로딩 중…"}</small>
-                )}
-                </div>
-            </Container>
-        </Navbar>
+        //         ) : (
+        //             <small className="text-muted">{err || "날씨 로딩 중…"}</small>
+        //         )}
+        //         </div>
+        //     </Container>
+        // </Navbar>
     );
 }
 
