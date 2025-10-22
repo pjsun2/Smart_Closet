@@ -16,9 +16,8 @@ back/instance
 *.pyc
 __pycache__/
 
-<<<<<<< HEAD
 requirements.txt
-=======
 tts_outputs/
 fashion_chroma_db/
->>>>>>> f5c834eee79f97fe0283cd8098c0b58afa2ab905
+
+back/db_files/smart_closet.db
