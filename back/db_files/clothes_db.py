@@ -354,7 +354,7 @@ def get_user_clothing_with_attributes(user_id):
                 'sub_category': sub_category,
                 'details': details,
                 'created_at': create_date,
-                # 'image_url': image_url
+                'image_url': image_url
             })
         
         print(f"[DB] 사용자 {user_id}의 옷 {len(result)}개 조회 완료")
@@ -503,7 +503,7 @@ def insert_test_data():
 if __name__ == '__main__':
 
     # 동미랑 사용자 생성
-    insert_user('dongmirang@example.com', 'password123', '동미랑')
+    # insert_user('dongmirang@example.com', 'password123', '동미랑')
 
     # 모든 사용자 조회
     # get_all_users()
@@ -524,7 +524,7 @@ if __name__ == '__main__':
     # check_database_contents()
 
     # 테스트 데이터 삽입
-    insert_test_data()
+    # insert_test_data()
 
     # 특정 사용자의 옷과 속성 조회
     get_user_clothing_with_attributes(1)

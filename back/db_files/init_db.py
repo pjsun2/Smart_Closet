@@ -14,7 +14,8 @@ def init_database():
             User_password TEXT NOT NULL,
             User_nickname TEXT NOT NULL,
             User_createDate DATE NOT NULL,
-            User_updateDate DATE NOT NULL
+            User_updateDate DATE NOT NULL,
+            User_gender TEXT NOT NULL
         )
     ''')
     
