@@ -9,8 +9,9 @@ function Wardrobe() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('전체');
     const [searchTerm, setSearchTerm] = useState('');
+    const [deletingId, setDeletingId] = useState(null);
 
-    // DB에서 옷 목록 조회 (시뮬레이션)
+    // DB에서 옷 목록 조회
     useEffect(() => {
         fetchClothes();
     }, []);
@@ -19,85 +20,21 @@ function Wardrobe() {
         try {
             setLoading(true);
             
-            // 목업 데이터 (DB에서 가져온 것처럼)
-            const mockClothes = [
-                {
-                    id: 1,
-                    main_category: "상의",
-                    details: {
-                        색상: "파란색",
-                        소재: "면",
-                        스타일: "캐주얼"
-                    },
-                    created_at: "2025-10-15",
-                    image_url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=500&fit=crop"
-                },
-                {
-                    id: 2,
-                    main_category: "하의",
-                    details: {
-                        색상: "검은색",
-                        소재: "데님",
-                        스타일: "캐주얼"
-                    },
-                    created_at: "2025-10-16",
-                    image_url: "https://via.placeholder.com/300x400?text=검은+하의"  // ✅ 추가
-                },
-                {
-                    id: 3,
-                    main_category: "아우터",
-                    details: {
-                        색상: "회색",
-                        소재: "울",
-                        스타일: "포멀"
-                    },
-                    created_at: "2025-10-14",
-                    image_url: "https://via.placeholder.com/300x400?text=회색+아우터"  // ✅ 추가
-                },
-                {
-                    id: 4,
-                    main_category: "상의",
-                    details: {
-                        색상: "흰색",
-                        소재: "면",
-                        스타일: "미니멀"
-                    },
-                    created_at: "2025-10-13",
-                    image_url: "https://via.placeholder.com/300x400?text=흰색+상의"  // ✅ 추가
-                },
-                {
-                    id: 5,
-                    main_category: "원피스",
-                    details: {
-                        색상: "빨간색",
-                        소재: "실크",
-                        스타일: "포멀"
-                    },
-                    created_at: "2025-10-12",
-                    image_url: "https://via.placeholder.com/300x400?text=빨간+원피스"  // ✅ 추가
-                },
-                {
-                    id: 6,
-                    main_category: "하의",
-                    details: {
-                        색상: "카키색",
-                        소재: "면",
-                        스타일: "캐주얼"
-                    },
-                    created_at: "2025-10-11",
-                    image_url: "https://via.placeholder.com/300x400?text=카키색+하의"  // ✅ 추가
-                }
-            ];
+            // DB에서 데이터 조회
+            const res = await fetch('/api/clothing/wardrobe');  // ← /1 제거
             
-            // 실제 DB 연동 (나중에 이 부분 교체)
-            // const res = await fetch('/api/wardrobe');
-            // const data = await res.json();
-            // setClothes(data.clothes || []);
+            if (!res.ok) {
+                throw new Error('옷 목록 조회 실패');
+            }
             
-            setClothes(mockClothes);
-            console.log('[프론트] 옷장 데이터:', mockClothes);
+            const data = await res.json();
+            console.log('[프론트] 옷장 데이터:', data.clothes);
+            
+            setClothes(data.clothes || []);
+            
         } catch (e) {
-            console.error('에러:', e);
+            console.error('[프론트] 에러:', e);
+            alert('옷 목록을 불러올 수 없습니다.');
         } finally {
             setLoading(false);
         }
@@ -117,22 +54,33 @@ function Wardrobe() {
     const filteredClothes = clothes.filter(item => {
         const matchCategory = filter === '전체' || item.main_category === filter;
         const matchSearch = item.main_category.includes(searchTerm) || 
-                          (item.details?.색상 || '').includes(searchTerm);
+                          Object.values(item.details || {}).some(val => 
+                              String(val).includes(searchTerm)
+                          );
         return matchCategory && matchSearch;
     });
 
     const deleteClothing = async (id) => {
-        if (window.confirm('정말 삭제하시겠습니까?')) {
-            try {
-                // 실제 DB 삭제 (나중에 활성화)
-                // const res = await fetch(`/api/clothes/${id}`, { method: 'DELETE' });
-                
-                // 목업: 배열에서 제거
-                setClothes(clothes.filter(item => item.id !== id));
-                alert('삭제되었습니다');
-            } catch (e) {
-                console.error('삭제 실패:', e);
+        if (!window.confirm('정말 삭제하시겠습니까?')) return;
+        
+        try {
+            setDeletingId(id);
+            
+            // DB에서 삭제
+            const res = await fetch(`/api/clothing/${id}`, { method: 'DELETE' });
+            
+            if (!res.ok) {
+                throw new Error('삭제 실패');
             }
+            
+            // 목록에서 제거
+            setClothes(clothes.filter(item => item.id !== id));
+            alert('삭제되었습니다');
+        } catch (e) {
+            console.error('삭제 실패:', e);
+            alert('삭제에 실패했습니다.');
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -153,7 +101,7 @@ function Wardrobe() {
         <Container style={{ paddingTop: '80px', paddingBottom: '40px', minHeight: '100vh' }}>
             {/* 헤더 */}
             <div className="wardrobe-header mb-4">
-                <h1>👗 내 옷장</h1>
+                <h1>내 옷장</h1>
                 <p className="text-muted">총 {filteredClothes.length}개의 옷</p>
             </div>
 
@@ -204,7 +152,7 @@ function Wardrobe() {
                     {filteredClothes.map((item, index) => (
                         <Col key={index} md={6} lg={4}>
                             <Card className="clothing-card h-100 shadow-sm">
-                                {/* ✅ 이미지 표시 */}
+                                {/* 이미지 표시 */}
                                 <div className="image-container">
                                     <img 
                                         src={item.image_url} 
@@ -253,8 +201,14 @@ function Wardrobe() {
                                             size="sm"
                                             className="w-100"
                                             onClick={() => deleteClothing(item.id)}
+                                            disabled={deletingId === item.id}
                                         >
-                                            삭제
+                                            {deletingId === item.id ? (
+                                                <>
+                                                    <Spinner animation="border" size="sm" role="status" className="me-2" />
+                                                    삭제 중...
+                                                </>
+                                            ) : '삭제'}
                                         </Button>
                                     </div>
                                 </Card.Body>

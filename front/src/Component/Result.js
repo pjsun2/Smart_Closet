@@ -35,42 +35,117 @@ function Result() {
         });
     };
 
+    // 모델 결과를 DB 형식으로 변환
+const convertToDbFormat = (clothingItem) => {
+    const attributes = {};
+    
+    Object.entries(clothingItem.details).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+            // 스타일(확률이 있는 배열)인 경우 - Top 3로 변환
+            if (key === '스타일' && value.length > 0) {
+                value.slice(0, 3).forEach((item, index) => {
+                    const rank = index + 1;
+                    attributes[`추천 스타일 ${rank}순위`] = 
+                        `${item.name} (확률: ${(item.confidence * 100).toFixed(2)}%)`;
+                });
+            } else {
+                // 다른 배열 타입은 첫번째 값 사용
+                attributes[key] = value[0]?.name || value.join(', ');
+            }
+        } else {
+            // 일반 문자열/숫자 값
+            attributes[key] = value;
+        }
+    });
+    
+    return attributes;
+};
+
     // 옷장에 저장하는 함수
     const saveToWardrobe = async () => {
         try {
             console.log("[프론트] 옷장에 저장 시작");
             
-            // 나중에 구현될 API 호출
-            // const res = await fetch('/api/wardrobe/save', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({
-            //         detected: detected,
-            //         image_path: imagePath
-            //     })
-            // });
+            const userConfirm = window.confirm('옷장에 저장하시겠습니까?');
             
-            // if (res.ok) {
-            //     alert('✅ 옷장에 저장되었습니다!');
-            //     navigate('/wardrobe');
-            //     return;
-            // }
-            
-            // 임시: 저장 시뮬레이션
-            const userConfirm = window.confirm('✅ 옷장에 저장하시겠습니까?');
-            
-            if (userConfirm) {
-                console.log("[프론트] 저장할 데이터:", detected);
-                alert('✅ 옷장에 저장되었습니다!');
-                // ✅ OK 누르면 내 옷장 페이지로 이동
-                navigate('/wardrobe');
-            } else {
+            if (!userConfirm) {
                 console.log("[프론트] 저장 취소됨");
+                return;
             }
+
+            const saveButton = document.querySelector('button[variant="success"]');
+            if (saveButton) saveButton.disabled = true;
+
+            let successCount = 0;
+            let failedCount = 0;
+
+            for (let i = 0; i < detected.length; i++) {
+                const clothingItem = detected[i];
+                const attributes = convertToDbFormat(clothingItem);
+                
+                console.log(`[프론트] ${i + 1}번 옷 속성:`, attributes);
+
+                try {
+                    const res = await fetch('/api/clothing/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: 1,
+                            image_url: image,
+                            main_category: clothingItem.main_category,
+                            sub_category: clothingItem.details.카테고리 || '기타',  // ← 수정
+                            attributes: attributes
+                        })
+                    });
+
+                    if (res.ok) {
+                        const result = await res.json();
+                        console.log(`[프론트] ${i + 1}번 옷 저장 성공:`, result);
+                        successCount++;
+                    } else {
+                        const errorData = await res.json();
+                        console.error(`[프론트] ${i + 1}번 옷 저장 실패:`, errorData);
+                        failedCount++;
+                    }
+                } catch (err) {
+                    console.error(`[프론트] ${i + 1}번 옷 저장 중 오류:`, err);
+                    failedCount++;
+                }
+            }
+
+            if (failedCount === 0) {
+                alert(`모든 옷이 저장되었습니다! (${successCount}개)`);
+                navigate('/wardrobe');
+            } else if (successCount > 0) {
+                const retry = window.confirm(
+                    `${successCount}개 저장 성공, ${failedCount}개 저장 실패\n\n` +
+                    `다시 시도하시겠습니까?`
+                );
+                if (retry) {
+                    saveToWardrobe();
+                } else {
+                    navigate('/wardrobe');
+                }
+            } else {
+                const retry = window.confirm(
+                    `모든 옷 저장에 실패했습니다.\n\n` +
+                    `다시 시도하시겠습니까?`
+                );
+                if (retry) {
+                    saveToWardrobe();
+                }
+            }
+
+            if (saveButton) saveButton.disabled = false;
             
         } catch (e) {
             console.error('저장 실패:', e);
-            alert('❌ 저장 실패');
+            alert('저장 중 오류가 발생했습니다.');
+            
+            const retry = window.confirm('다시 시도하시겠습니까?');
+            if (retry) {
+                saveToWardrobe();
+            }
         }
     };
 
@@ -94,7 +169,7 @@ function Result() {
     return (
         <Container style={{ paddingTop: '80px', paddingBottom: '40px', minHeight: '100vh' }}>
             <div className="result-header mb-5">
-                <h1>✨ 옷 분석 완료!</h1>
+                <h1>옷 분석 완료!</h1>
                 <p className="text-muted">총 {detected.length}개의 옷을 감지했습니다</p>
             </div>
 
@@ -166,7 +241,7 @@ function Result() {
                     onClick={saveToWardrobe}
                     className="px-4"
                 >
-                    💾 옷장에 저장
+                    옷장에 저장
                 </Button>
                 <Button 
                     variant="primary" 
