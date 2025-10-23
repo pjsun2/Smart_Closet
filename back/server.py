@@ -5,6 +5,7 @@ from db_ import db, init_db
 from routes.users import users_bp
 from routes.member_test import members_bp
 from chat.langspeech_openai_chroma import chat_bp
+from db_files.auth_db import auth_bp
 from routes.clothes import clothes_bp, initialize_models
 import os
 
@@ -24,6 +25,7 @@ os.environ['ORT_CUDA_UNAVAILABLE'] = '0'  # CUDA 사용 가능 표시
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev_secret_key_123")
     
     # 308에러 발생 방지
     CORS(app,resources={r"/api/*": {"origins": ["https://localhost:3000", "https://127.0.0.1:3000"]}})
@@ -34,7 +36,8 @@ def create_app():
     app.register_blueprint(users_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(clothes_bp)
-
+    app.register_blueprint(auth_bp)
+    
     app.config.from_object(Config)
     os.makedirs(app.instance_path, exist_ok=True)
     

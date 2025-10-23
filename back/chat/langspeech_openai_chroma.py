@@ -274,6 +274,7 @@ def speak_edge(answer, voice="ko-KR-SoonBokNeural", rate="+8%", pitch="+5Hz"):
 def get_audio_text():
     data = request.get_json(silent=True) or {}
     text = data.get("text", "")
+    print(data)
     
     # 패션어시스턴트 초기화
     assistant = FashionAssistant(persist_directory="./fashion_chroma_db")

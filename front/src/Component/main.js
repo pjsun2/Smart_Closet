@@ -28,23 +28,23 @@ function Main() {
     const [useWarp, setUseWarp] = useState(true); // 관절 매칭 사용
 
     // 스크롤 차단
-    // useEffect(() => {
-    //     const prevHtmlOverflow  = document.documentElement.style.overflow;
-    //     const prevBodyOverflow  = document.body.style.overflow;
-    //     const prevBodyHeight    = document.body.style.height;
+    useEffect(() => {
+        const prevHtmlOverflow  = document.documentElement.style.overflow;
+        const prevBodyOverflow  = document.body.style.overflow;
+        const prevBodyHeight    = document.body.style.height;
 
-    //     document.documentElement.style.overflow = "hidden";
-    //     document.body.style.overflow = "hidden";
-    //     document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
 
-    //     return () => {
-    //         document.documentElement.style.overflow = prevHtmlOverflow;
-    //         document.body.style.overflow = prevBodyOverflow;
-    //         document.body.style.height   = prevBodyHeight;
-    //         cleanupTimers();
-    //         stopCamera();
-    //     };
-    // }, []);
+        return () => {
+            document.documentElement.style.overflow = prevHtmlOverflow;
+            document.body.style.overflow = prevBodyOverflow;
+            document.body.style.height   = prevBodyHeight;
+            cleanupTimers();
+            stopCamera();
+        };
+    }, []);
 
     const cameraFrame = {
         background: "linear-gradient(45deg, #667eea 0%, #764ba2 100%)",
@@ -800,55 +800,55 @@ function Main() {
 
                 {/* 버튼: 가운데 정렬 */}
                 <div className="mt-3 d-flex justify-content-center gap-3">
-                <Button
-                    variant={isListening ? "warning": "danger"}
-                    onClick={isListening ? handleStop : handleStart}
-                    className="px-4 py-2"
-                >
-                    {isListening ? "인식중지" : "질문하기"}
-                </Button>
-                <Button
-                    variant="primary"
-                    onClick={handleClothSave}
-                    disabled={uploading || !!timerRef.current}
-                    className="px-4 py-2"
-                >
-                    옷저장
-                </Button>
-                {/* <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    style={{ display: "none" }}
-                    id="clothFileInput"
-                    disabled={isRunning && !timerRef.current && !uploading}
-                />
-                <label
-                    htmlFor="clothFileInput"
-                    className="btn btn-primary px-4 py-2"
-                    style={{
-                        cursor: "pointer",
-                        marginBottom: 0,
-                    }}
-                >
-                    옷저장
-                </label> */}
-                <Button
-                    variant={isFittingMode ? "success" : "warning"}
-                    onClick={handleStartFit}
-                    disabled={!isRunning || uploading}
-                    className="px-4 py-2"
-                >
-                    {isFittingMode ? "피팅 중지" : "입어보기"}
-                </Button>
-                <Button
-                    variant="secondary"
-                    onClick={stopCapture}
-                    className="px-4 py-2"
-                >
-                    정지
-                </Button>
+                    <Button
+                        variant={isListening ? "warning": "danger"}
+                        onClick={isListening ? handleStop : handleStart}
+                        className="px-4 py-2"
+                    >
+                        {isListening ? "인식중지" : "질문하기"}
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={handleClothSave}
+                        disabled={uploading || !!timerRef.current}
+                        className="px-4 py-2"
+                    >
+                        옷저장
+                    </Button>
+                    {/* <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        style={{ display: "none" }}
+                        id="clothFileInput"
+                        disabled={isRunning && !timerRef.current && !uploading}
+                    />
+                    <label
+                        htmlFor="clothFileInput"
+                        className="btn btn-primary px-4 py-2"
+                        style={{
+                            cursor: "pointer",
+                            marginBottom: 0,
+                        }}
+                    >
+                        옷저장
+                    </label> */}
+                    <Button
+                        variant={isFittingMode ? "success" : "warning"}
+                        onClick={handleStartFit}
+                        disabled={!isRunning || uploading}
+                        className="px-4 py-2"
+                    >
+                        {isFittingMode ? "피팅 중지" : "입어보기"}
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={stopCapture}
+                        className="px-4 py-2"
+                    >
+                        정지
+                    </Button>
                 </div>
                 {/* {voicetext} */}
                 {/* 캡처 미리보기 & 서버 경로 */}

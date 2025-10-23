@@ -12,6 +12,9 @@ function Header() {
     const [showLogin, setShowLogin] = useState(false);
     const [pendingAction, setPendingAction] = useState(null); // 'login' | null
 
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
     const API = process.env.REACT_APP_OPENWEATHER_KEY;
 
     useEffect(() => {
@@ -89,6 +92,61 @@ function Header() {
         weekday: "short",
         timeZone: "Asia/Seoul",
     });
+
+    useEffect(() => {
+        const fetchSession = async () => {
+            try {
+                const res = await fetch("/api/auth/me", {
+                    credentials: "include", // Flask 세션 쿠키 포함
+                });
+                const data = await res.json();
+
+                if (data.ok && data.authenticated) {
+                    setUser(data.user);
+                    sessionStorage.setItem("user", JSON.stringify(data.user));
+                    console.log("로그인된 사용자:", data.user);
+                } else {
+                    setUser(null);
+                    sessionStorage.removeItem("user");
+                }
+            } catch (err) {
+                console.error("세션 확인 실패:", err);
+                setUser(null);
+                sessionStorage.removeItem("user");
+            } finally {
+                setLoading(false);    
+            }
+        };
+        const savedUser = sessionStorage.getItem("user");
+        if (savedUser) {
+            setUser(JSON.parse(savedUser));
+            setLoading(false);
+        } else {
+            fetchSession();
+        }
+    }, []);
+
+        // const fetchSession = async () => {
+        //     try {
+        //         const res = await fetch("/api/auth/me", {
+        //             credentials: "include",  // 세션 쿠키 포함
+        //         });
+        //         const data = await res.json();
+
+        //         if (data.ok && data.authenticated) {
+        //             setUser(data.user); // Flask의 session["user"] 값
+        //             console.log(user);
+        //         } else {
+        //             setUser(null);
+        //         }
+        //     } catch (err) {
+        //         console.error("세션 확인 실패:", err);
+        //         setUser(null);
+        //     } finally {
+        //         setLoading(false);
+        //     }
+        // };
+        // fetchSession();
 
     return (
         <>
@@ -177,13 +235,25 @@ function Header() {
                 scroll
                 backdrop
                 style={{
-                    width: "35%"
+                    width: "37%"
                 }}
             >
-                <Offcanvas.Header closeButton style={{marginRight: 15}}>
+                <Offcanvas.Header closeButton style={{ marginRight: 15 }}>
                     <Offcanvas.Title>
-                        <img src="/dumirlogo.png" alt="logo" style={{ height: 70, width: 70, marginLeft: 5}} />
-                        {/* <h3 className="mb-0">Dumir Smart Closet</h3> */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <img
+                            src="/dumirlogo.png"
+                            alt="logo"
+                            style={{ height: 70, width: 70, marginLeft: 5 }}
+                        />
+                        {user ? (
+                            <div>
+                            <strong>{user.name}</strong> 님 안녕하세요
+                            </div>
+                        ) : (
+                            <div></div>
+                        )}
+                        </div>
                     </Offcanvas.Title>
                 </Offcanvas.Header>
                 <hr
@@ -195,15 +265,34 @@ function Header() {
                 />
                 <Offcanvas.Body>
                     <div className="d-grid gap-2">
-                        <Button
-                            size="lg"
-                            onClick={() => {
-                                setPendingAction("login"); // 로그인 의도 기록
-                                setOpen(false);            // 먼저 사이드 패널 닫기
-                            }}
-                        >
-                        로그인
-                        </Button>
+                        {user ? (
+                            <Button
+                                size="lg"
+                                onClick={async () => {
+                                    await fetch("/api/auth/logout", {
+                                        method: "POST",
+                                        credentials: "include",
+                                    });
+                                    sessionStorage.removeItem("user");
+                                    setUser(null);
+                                    setTimeout(() => {
+                                        window.location.reload(); // 현재 페이지 새로고침
+                                    }, 500);
+                                }}
+                            >
+                                로그아웃
+                            </Button>              
+                        ) : (
+                            <Button
+                                size="lg"
+                                onClick={() => {
+                                    setPendingAction("login"); // 로그인 의도 기록
+                                    setOpen(false);            // 먼저 사이드 패널 닫기
+                                }}
+                            >
+                            로그인
+                            </Button>
+                        )}
                         {/* <Button
                             size="lg"
                             variant="outline-primary"
