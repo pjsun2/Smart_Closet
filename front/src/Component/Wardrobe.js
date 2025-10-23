@@ -153,7 +153,7 @@ function Wardrobe() {
         <Container style={{ paddingTop: '80px', paddingBottom: '40px', minHeight: '100vh' }}>
             {/* 헤더 */}
             <div className="wardrobe-header mb-4">
-                <h1>👗 내 옷장</h1>
+                <h1>내 옷장</h1>
                 <p className="text-muted">총 {filteredClothes.length}개의 옷</p>
             </div>
 
