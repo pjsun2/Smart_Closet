@@ -10,33 +10,97 @@ function Wardrobe() {
     const [filter, setFilter] = useState('전체');
     const [searchTerm, setSearchTerm] = useState('');
     const [deletingId, setDeletingId] = useState(null);
+    
+    // 세션 확인 상태 추가
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isSessionChecked, setIsSessionChecked] = useState(false);
 
-    // DB에서 옷 목록 조회
+    // 페이지 로드 시 세션 확인
     useEffect(() => {
-        fetchClothes();
-    }, []);
+        const checkSession = async () => {
+            try {
+                const res = await fetch('/api/auth/me', {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                console.log('[프론트] 세션 확인:', data);
+                
+                if (data.authenticated) {
+                    setIsLoggedIn(true);
+                    // 세션 확인 후 옷 목록 조회
+                    await fetchClothes();
+                } else {
+                    setIsLoggedIn(false);
+                    setIsSessionChecked(true);
+                    // ✅ 1초 후 Main 페이지로 이동
+                    setTimeout(() => {
+                        alert('로그인이 필요합니다.');
+                        navigate('/');
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('[프론트] 세션 확인 실패:', error);
+                setIsLoggedIn(false);
+                setIsSessionChecked(true);
+                // ✅ 1초 후 Main 페이지로 이동
+                setTimeout(() => {
+                    alert('로그인이 필요합니다.');
+                    navigate('/');
+                }, 100);
+            }
+        };
+        
+        checkSession();
+    }, [navigate]);
 
+    // 세션의 사용자 옷만 조회
     const fetchClothes = async () => {
         try {
             setLoading(true);
             
-            // DB에서 데이터 조회
-            const res = await fetch('/api/clothing/wardrobe');  // ← /1 제거
+            const res = await fetch('/api/clothing/wardrobe', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('[프론트] 응답 상태:', res.status);
             
             if (!res.ok) {
-                throw new Error('옷 목록 조회 실패');
+                if (res.status === 401) {
+                    alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+                    navigate('/');
+                    return;
+                }
+                throw new Error(`옷 목록 조회 실패: ${res.status}`);
             }
             
             const data = await res.json();
-            console.log('[프론트] 옷장 데이터:', data.clothes);
+            console.log('[프론트] 옷장 데이터:', data);
             
-            setClothes(data.clothes || []);
+            if (data.ok && data.clothing) {
+                console.log('[프론트] clothing 배열:', data.clothing);
+                setClothes(data.clothing);
+            } else if (Array.isArray(data)) {
+                console.log('[프론트] 배열 직접 반환');
+                setClothes(data);
+            } else if (data.clothes) {
+                console.log('[프론트] clothes 배열:', data.clothes);
+                setClothes(data.clothes);
+            } else {
+                console.warn('[프론트] 예상치 못한 응답 형식:', data);
+                setClothes([]);
+            }
             
         } catch (e) {
             console.error('[프론트] 에러:', e);
-            alert('옷 목록을 불러올 수 없습니다.');
+            alert('옷 목록을 불러올 수 없습니다: ' + e.message);
+            setClothes([]);
         } finally {
             setLoading(false);
+            setIsSessionChecked(true);
         }
     };
 
@@ -66,11 +130,17 @@ function Wardrobe() {
         try {
             setDeletingId(id);
             
-            // DB에서 삭제
-            const res = await fetch(`/api/clothing/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/clothing/${id}`, { 
+                method: 'DELETE',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
             
             if (!res.ok) {
-                throw new Error('삭제 실패');
+                const errorData = await res.json();
+                throw new Error(errorData.message || '삭제 실패');
             }
             
             // 목록에서 제거
@@ -78,11 +148,30 @@ function Wardrobe() {
             alert('삭제되었습니다');
         } catch (e) {
             console.error('삭제 실패:', e);
-            alert('삭제에 실패했습니다.');
+            alert('삭제에 실패했습니다: ' + e.message);
         } finally {
             setDeletingId(null);
         }
     };
+
+    // ✅ 세션 확인 중이면 로딩 표시
+    if (!isSessionChecked) {
+        return (
+            <Container style={{ paddingTop: '80px', minHeight: '100vh' }}>
+                <div className="text-center mt-5">
+                    <Spinner animation="border" role="status">
+                        <span className="visually-hidden">세션 확인 중...</span>
+                    </Spinner>
+                    <p className="mt-3">세션을 확인하는 중...</p>
+                </div>
+            </Container>
+        );
+    }
+
+    // ✅ 로그인하지 않으면 빈 페이지 표시 (자동으로 Main으로 이동됨)
+    if (!isLoggedIn) {
+        return null;
+    }
 
     if (loading) {
         return (
