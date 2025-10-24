@@ -56,23 +56,43 @@ def login():
     
     data = request.get_json(silent=True) or {}
     user_id = (data.get("userId") or "").strip()
-    password = data.get("password") or ""
+    # password = data.get("password") or "",
     
-    cursor.execute("SELECT User_password, User_nickname, User_gender FROM User WHERE User_email = ?", (user_id,))
+    raw_pwd = data.get("password") or ""
+    if isinstance(raw_pwd, (list, tuple)):
+        raw_pwd = raw_pwd[0] if raw_pwd else ""
+    password = str(raw_pwd)
+    
+    cursor.execute(
+        """
+            SELECT 
+                User_id,
+                User_password, 
+                User_nickname, 
+                User_gender
+            FROM User WHERE User_email = ?""", (user_id,))
     row = cursor.fetchone()
     conn.close()
     
     if not row:
         return jsonify(ok=False, message="아이디 또는 비밀번호가 올바르지 않습니다."), 401
-
+    else:
+        # useridseq = row[0]
+        # stored_hash = row[1]
+        # nickname = row[2]
+        # gender = row[3]
+        
+        useridseq = row[0]
+        stored_hash = row[1]
+        nickname = row[2]
+        gender = row[3]
+        
+        
     # row_factory 설정했다면 키로 접근 가능
-    stored_hash = row[0]
-    nickname = row[1]
-    gender = row[2]
-
+    
     if check_password_hash(stored_hash, password):
         # 세션 저장 (쿠키로 클라이언트에 서명되어 전달됨)
-        session["user"] = {"id": user_id, "name": nickname, "gender": gender}
+        session["user"] = {"id": user_id, "name": nickname, "gender": gender, "useridseq": useridseq}
         return jsonify(ok=True, user=session["user"])
     else:
         return jsonify(ok=False, message="아이디 또는 비밀번호가 올바르지 않습니다."), 401

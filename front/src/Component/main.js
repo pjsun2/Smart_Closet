@@ -800,6 +800,7 @@ function Main() {
 
                 {/* 버튼: 가운데 정렬 */}
                 <div className="mt-3 d-flex justify-content-center gap-3">
+                    
                     <Button
                         variant={isListening ? "warning": "danger"}
                         onClick={isListening ? handleStop : handleStart}
