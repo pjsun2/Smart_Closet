@@ -1,0 +1,77 @@
+# Smart Closet - 실행 파일 빠른 가이드
+
+## 🚀 실행 방법 (더블클릭)
+
+### 추천 순서
+
+1️⃣ **Smart_Closet_Launcher.pyw** (GUI 런처) ⭐
+   - 클릭만으로 모든 기능 사용 가능
+   - 시작/중지 버튼으로 간편 제어
+
+2️⃣ **start_all.bat** (통합 시작)
+   - 백엔드 + 프론트엔드 동시 시작
+   - 각 서버가 별도 창으로 실행됨
+
+3️⃣ **stop_servers.bat** (전체 종료)
+   - 실행 중인 모든 서버 종료
+
+---
+
+## 📂 전체 파일 목록
+
+| 파일 | 기능 | 사용 시점 |
+|------|------|-----------|
+| `Smart_Closet_Launcher.pyw` | GUI 런처 (가장 편리) | ⭐ 일반 사용 |
+| `start_all.bat` | 백엔드+프론트 동시 시작 | 빠른 전체 시작 |
+| `start_backend.bat` | 백엔드만 시작 | API 개발/테스트 |
+| `start_frontend.bat` | 프론트엔드만 시작 | UI 개발/테스트 |
+| `stop_servers.bat` | 모든 서버 종료 | 서버 정리 |
+
+---
+
+## ⚡ 빠른 시작 3단계
+
+```
+1. Smart_Closet_Launcher.pyw 더블클릭
+2. "모두 시작" 버튼 클릭
+3. 브라우저에서 https://localhost:3000 접속
+```
+
+**또는**
+
+```
+1. start_all.bat 더블클릭
+2. 브라우저에서 https://localhost:3000 접속
+```
+
+---
+
+## 🛑 종료 방법
+
+### 방법 1: GUI에서 종료
+```
+Smart_Closet_Launcher.pyw → "모든 서버 중지" 버튼
+```
+
+### 방법 2: 배치 파일로 종료
+```
+stop_servers.bat 더블클릭
+```
+
+### 방법 3: 수동 종료
+각 서버 창에서 `Ctrl + C` 누르기
+
+---
+
+## 💡 팁
+
+- 🎯 **일반 사용자**: `Smart_Closet_Launcher.pyw` 사용
+- 🔧 **개발자**: 개별 bat 파일로 필요한 서버만 실행
+- 🚨 **문제 발생 시**: `stop_servers.bat`으로 전체 종료 후 재시작
+
+---
+
+## 📞 접속 주소
+
+- **사용자 웹**: https://localhost:3000
+- **API 서버**: https://localhost:5000
