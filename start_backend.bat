@@ -45,6 +45,7 @@ echo Press Ctrl+C to stop.
 echo ========================================
 echo.
 
+set NUMBA_DISABLE_JIT=1
 python server.py
 
 if errorlevel 1 (
