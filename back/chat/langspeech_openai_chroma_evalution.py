@@ -21,12 +21,17 @@ import playsound
 import asyncio
 import edge_tts
 import uuid
+
+# ===== [EVAL ONLINE] 유틸 =====
+from datetime import datetime
 import time
-import requests
+import csv
+import re
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+from rouge_score import rouge_scorer
 
 load_dotenv(override=True)
 chat_bp = Blueprint("chat", __name__, url_prefix="/api/voice")
-WEATHER_CACHE = {"key": None, "ts": 0}  # 초간단 캐시(60초)
 
 # 출력 스키마 정의
 class FashionRecommendation(BaseModel):
@@ -42,7 +47,7 @@ class FashionAssistant:
         
         # LLM 초기화
         self.llm = ChatOpenAI(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             temperature=0.8,
             max_tokens=300,
             api_key=self.api_key
@@ -188,9 +193,9 @@ class FashionAssistant:
         except Exception as e:
             print(f"저장 중 오류: {e}")
     
-    def chat_answer(self, user_text: str, weather_summary: str, use_history: bool = True) -> dict:
+    def chat_answer(self, user_text: str, use_history: bool = True) -> dict:
         """패션 추천 생성"""
-        context = f"[현재 날씨]\n{weather_summary}\n\n"
+        context = ""
         
         # 유사한 과거 질문 검색 (선택적)
         if use_history:
@@ -236,52 +241,57 @@ class FashionAssistant:
         
         return result
     
-def get_weather(lat=None, lon=None, city=None):
-    """OpenWeather One Call(또는 Current Weather) 간단 조회"""
-    api_key = os.getenv("OPENWEATHER_API_KEY")
-    if not api_key:
-        return {"summary": "날씨 정보 없음(키 미설정)", "temp": None}
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+OUT_DIR = os.path.join(BASE_DIR, "tts_outputs")
+EVAL_OUT_DIR = os.path.join(BASE_DIR, "eval_outputs")
+os.makedirs(EVAL_OUT_DIR, exist_ok=True)
 
-    # 캐시(60s) – 좌표/도시별로 키 구성
-    key = f"{lat},{lon},{city}"
-    now = time.time()
-    if WEATHER_CACHE["key"] == key and now - WEATHER_CACHE["ts"] < 60 and "data" in WEATHER_CACHE:
-        return WEATHER_CACHE["data"]
+def _eval_log_path():
+    # 일자별 롤링 파일명
+    day = datetime.now().strftime("%Y%m%d")
+    return os.path.join(EVAL_OUT_DIR, f"online_eval_{day}.csv")
 
-    try:
-        if lat and lon:
-            url = ("https://api.openweathermap.org/data/2.5/weather"
-                f"?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=kr")
-        else:
-            q = city or os.getenv("DEFAULT_CITY", "Seoul")
-            url = ("https://api.openweathermap.org/data/2.5/weather"
-                f"?q={q}&appid={api_key}&units=metric&lang=kr")
+def append_eval_row(row: dict):
+    """
+    row keys (예시):
+      timestamp, session_user, question, reference, candidate,
+      bleu1..bleu4, rouge1_p/r/f, rouge2_p/r/f, rougeL_p/r/f, cand_len, ref_len
+    """
+    path = _eval_log_path()
+    write_header = not os.path.exists(path)
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=list(row.keys()))
+        if write_header: w.writeheader()
+        w.writerow(row)
+    return path
 
-        r = requests.get(url, timeout=5)
-        r.raise_for_status()
-        j = r.json()
+def _as_text(x): return "" if x is None else str(x)
 
-        desc = j["weather"][0]["description"]
-        temp = round(j["main"]["temp"])
-        feels = round(j["main"]["feels_like"])
-        humid = j["main"]["humidity"]
-        wind = j["wind"]["speed"]
-        rain = j.get("rain", {}).get("1h", 0.0)
-        snow = j.get("snow", {}).get("1h", 0.0)
+def _simple_tokenize(s: str):
+    s = _as_text(s)
+    s = re.sub(r"\s+", " ", s.strip())
+    return s.split(" ") if s else []
 
-        text = (
-            f"현재 기상: {desc}, 기온 {temp}°C (체감 {feels}°C), "
-            f"습도 {humid}%, 바람 {wind}m/s, 강수 {rain}mm, 적설 {snow}mm"
-        )
+def compute_bleu_rouge(candidate: str, reference: str):
+    cand_tokens = _simple_tokenize(candidate)
+    ref_tokens  = _simple_tokenize(reference)
+    references  = [ref_tokens]
+    smooth = SmoothingFunction().method3
 
-        data = {"summary": text, "temp": temp, "feels": feels,
-                "humidity": humid, "wind": wind, "rain": rain, "snow": snow, "raw": j}
+    bleu1 = sentence_bleu(references, cand_tokens, weights=(1,0,0,0), smoothing_function=smooth) if cand_tokens else 0.0
+    bleu2 = sentence_bleu(references, cand_tokens, weights=(0.5,0.5,0,0), smoothing_function=smooth) if cand_tokens else 0.0
+    bleu3 = sentence_bleu(references, cand_tokens, weights=(1/3,1/3,1/3,0), smoothing_function=smooth) if cand_tokens else 0.0
+    bleu4 = sentence_bleu(references, cand_tokens, weights=(0.25,0.25,0.25,0.25), smoothing_function=smooth) if cand_tokens else 0.0
 
-        WEATHER_CACHE.update({"key": key, "ts": now, "data": data})
-        return data
-
-    except Exception as e:
-        return {"summary": f"날씨 조회 오류: {e}", "temp": None}
+    scorer = rouge_scorer.RougeScorer(['rouge1','rouge2','rougeLsum'], use_stemmer=False)
+    scores = scorer.score(reference or "", candidate or "")
+    return {
+        "bleu1": bleu1, "bleu2": bleu2, "bleu3": bleu3, "bleu4": bleu4,
+        "rouge1_p": scores['rouge1'].precision, "rouge1_r": scores['rouge1'].recall, "rouge1_f": scores['rouge1'].fmeasure,
+        "rouge2_p": scores['rouge2'].precision, "rouge2_r": scores['rouge2'].recall, "rouge2_f": scores['rouge2'].fmeasure,
+        "rougeL_p": scores['rougeLsum'].precision, "rougeL_r": scores['rougeLsum'].recall, "rougeL_f": scores['rougeLsum'].fmeasure,
+        "cand_len": len(cand_tokens), "ref_len": len(ref_tokens),
+    }
 
 # 구글 STT
 def get_audio():
@@ -298,8 +308,7 @@ def get_audio():
             
         return said
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-OUT_DIR = os.path.join(BASE_DIR, "tts_outputs")
+
 
 # edge tts
 def speak_edge(answer, voice="ko-KR-SoonBokNeural", rate="+8%", pitch="+5Hz"):
@@ -331,33 +340,59 @@ def speak_edge(answer, voice="ko-KR-SoonBokNeural", rate="+8%", pitch="+5Hz"):
 # stt post 결과 보내기
 @chat_bp.route("/stt", methods=["POST"])
 def get_audio_text():
+    user = session.get("user")
     data = request.get_json(silent=True) or {}
-    text = data.get("text", "")
-    lat = data.get("lat", "")
-    lon = data.get("lon", "")
-    city = os.getenv("DEFAULT_CITY")
-    print(data)
+    # text = data.get("text", "")
+    # reference = data.get("reference", "")
+    text = _as_text(data.get("text", ""))          # 사용자 질문
+    reference = _as_text(data.get("reference", "")) # (옵션) 정답 문장
+    # print(data)
     
     # 패션어시스턴트 초기화
     assistant = FashionAssistant(persist_directory="./fashion_chroma_db")
     
-    # 날씨 정보
-    weather = get_weather(lat=lat, lon=lon, city=city)
-    
     # 챗봇 답변
-    result = assistant.chat_answer(data, weather_summary=weather["summary"])
+    result = assistant.chat_answer(data)
+    t0 = time.time()
+    elapsed_ms = (time.time() - t0) * 1000.0
     
     # 결과 추출
     keywords = result.get("키워드", [])
     styles = result.get("스타일", [])
-    text = result.get("추천문구", "")
+    rec_text = result.get("추천문구", "")
+
+     # (옵션) 즉시 평가 & CSV Append
+    scores = None
+    eval_csv_path = None
+    if reference:  # reference가 제공된 경우에만 평가
+        try:
+            scores = compute_bleu_rouge(rec_text, reference)
+            eval_row = {
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "session_user": user["useridseq"],
+                "question": text,
+                "reference": reference,
+                "candidate": rec_text,
+                "elapsed_ms": round(elapsed_ms, 2),
+                **scores
+            }
+            eval_csv_path = append_eval_row(eval_row)
+        except Exception as e:
+            print("[WARN] 온라인 평가 실패:", e)
 
     # tts 변환
     filename = speak_edge(text)
     
-    return jsonify({"ok": True, "keywords": keywords, 
-                    "styles": styles, "text": text,
-                    "tts_url": f"/api/voice/tts/{filename}"})
+    return jsonify({
+        "ok": True,
+        "keywords": keywords,
+        "styles": styles,
+        "text": rec_text,
+        "tts_url": f"/api/voice/tts/{filename}",
+        "metrics": scores,                     # {bleu*, rouge*_* ...} or None
+        "eval_csv": (f"/api/voice/eval/download?path={os.path.relpath(eval_csv_path, BASE_DIR)}"
+                     if eval_csv_path else None)
+    })
 
 # tts 결과 get으로 보내기
 @chat_bp.route("/tts/<path:filename>", methods=["GET"])
