@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Button, Container, Row, Col } from "react-bootstrap";
 import { useNavigate } from 'react-router-dom';
+import VirtualFittingLoader from './VirtualFittingLoader';
 
 function Main() {
     const navigate = useNavigate(); // 페이지 이동
@@ -26,6 +27,14 @@ function Main() {
     const fittingIntervalRef = useRef(null); // 피팅 프레임 전송 인터벌
     const [showSkeleton, setShowSkeleton] = useState(true); // 스켈레톤 표시
     const [useWarp, setUseWarp] = useState(true); // 관절 매칭 사용
+    const isFirstFrameRef = useRef(true); // 첫 프레임 플래그
+    
+    // 가상 피팅 로딩 상태
+    const [fittingLoading, setFittingLoading] = useState(false);
+    const [fittingStage, setFittingStage] = useState("idle");
+    const [fittingProgress, setFittingProgress] = useState(0);
+    const [fittingMessage, setFittingMessage] = useState("");
+    const fittingCancelRef = useRef(false); // 취소 플래그
 
     // 스크롤 차단
     useEffect(() => {
@@ -106,7 +115,33 @@ function Main() {
         setIsRunning(false);
     };
 
-    // “정지” 버튼: 예약 캡처 취소 + 썸네일 초기화 + 비디오는 계속 실시간
+    // "정지" 버튼: 모든 작업 취소
+    const stopAllActions = () => {
+        console.log("[프론트] 모든 작업 취소");
+        
+        // 1. 카메라 캡처 타이머 취소
+        cleanupTimers();
+        setCountdown(0);
+        setPendingAction(null);
+        setShot(null);
+        setServerPath(null);
+        setUploading(false);
+        
+        // 2. 가상 피팅 취소
+        if (fittingLoading || isFittingMode) {
+            stopVirtualFitting();
+        }
+        
+        // 3. 음성 인식 중지
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+        }
+        
+        console.log("[프론트] 모든 작업 취소 완료");
+    };
+    
+    // 이전 stopCapture 함수 (하위 호환성)
     const stopCapture = () => {
         cleanupTimers();
         setCountdown(0);
@@ -451,26 +486,37 @@ function Main() {
     
     // ========== 실시간 가상 피팅 기능 ==========
     
-    // 실시간 피팅 프레임 전송 및 처리
+    // 실시간 피팅 프레임 전송 및 처리 (최적화)
+    const sendFittingFrameRef = useRef(false); // 전송 중 플래그
+    
     const sendFittingFrame = async () => {
         if (!videoRef.current || !canvasRef.current) return;
+        
+        // 이전 요청이 아직 진행 중이면 스킵 (프레임 드롭)
+        if (sendFittingFrameRef.current) {
+            return;
+        }
+        
+        sendFittingFrameRef.current = true;
         
         try {
             const video = videoRef.current;
             const canvas = canvasRef.current;
             
-            const w = video.videoWidth || 1280;
-            const h = video.videoHeight || 720;
+            // 원본 해상도 사용 (1280x720) - 고화질 출력
+            const targetWidth = video.videoWidth || 1280;
+            const targetHeight = video.videoHeight || 720;
             
-            canvas.width = w;
-            canvas.height = h;
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
             
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(video, 0, 0, w, h);
+            const ctx = canvas.getContext("2d", { alpha: false });
+            ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
             
-            const frameData = canvas.toDataURL("image/jpeg", 0.8);
+            // JPEG 품질 85% (고화질 유지)
+            const frameData = canvas.toDataURL("image/jpeg", 0.85);
             
-            // 서버로 프레임 전송
+            // 서버로 프레임 전송 (첫 프레임 플래그 포함)
             const response = await fetch("/api/fit/stream", {
                 method: "POST",
                 headers: {
@@ -479,9 +525,16 @@ function Main() {
                 body: JSON.stringify({
                     frame: frameData,
                     showSkeleton: showSkeleton,
-                    useWarp: useWarp
+                    useWarp: useWarp,
+                    isFirstFrame: isFirstFrameRef.current  // ✨ 첫 프레임 플래그
                 })
             });
+            
+            // 첫 프레임 전송 후 플래그 해제
+            if (isFirstFrameRef.current) {
+                isFirstFrameRef.current = false;
+                console.log("[프론트] 첫 프레임 전송 완료 - 스트리밍 시작");
+            }
             
             if (!response.ok) {
                 console.error("[프론트] 피팅 프레임 처리 실패:", response.status);
@@ -496,26 +549,144 @@ function Main() {
             
         } catch (error) {
             console.error("[프론트] 피팅 프레임 전송 오류:", error);
+        } finally {
+            sendFittingFrameRef.current = false;
         }
     };
     
     // 가상 피팅 시작
-    const startVirtualFitting = () => {
+    const startVirtualFitting = async () => {
         console.log("[프론트] 가상 피팅 시작");
-        setIsFittingMode(true);
         
-        // 실시간 프레임 전송 시작 (200ms 간격)
-        fittingIntervalRef.current = setInterval(() => {
-            sendFittingFrame();
-        }, 200);
+        try {
+            // 취소 플래그 초기화
+            fittingCancelRef.current = false;
+            
+            // 로딩 시작
+            setFittingLoading(true);
+            setFittingStage("initializing");
+            setFittingProgress(10);
+            setFittingMessage("GPU 환경 확인 중...");
+            
+            // 백엔드 초기화 요청
+            const initRes = await fetch("/api/fit/initialize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+            
+            // 취소 확인
+            if (fittingCancelRef.current) {
+                console.log("[프론트] 가상 피팅 초기화 취소됨");
+                return;
+            }
+            
+            if (!initRes.ok) {
+                throw new Error("가상 피팅 초기화 실패");
+            }
+            
+            const initData = await initRes.json();
+            console.log("[프론트] 초기화 응답:", initData);
+            
+            // 단계별 진행 시뮬레이션 (백엔드가 빠르면 사용자에게 시각적 피드백)
+            setFittingStage("loading_pose");
+            setFittingProgress(30);
+            setFittingMessage("RTMPose 모델 로딩 중...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 취소 확인
+            if (fittingCancelRef.current) {
+                console.log("[프론트] 가상 피팅 로딩 취소됨 (pose)");
+                return;
+            }
+            
+            setFittingStage("loading_cloth");
+            setFittingProgress(60);
+            setFittingMessage("옷 이미지 처리 중...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 취소 확인
+            if (fittingCancelRef.current) {
+                console.log("[프론트] 가상 피팅 로딩 취소됨 (cloth)");
+                return;
+            }
+            
+            setFittingStage("detecting_pose");
+            setFittingProgress(80);
+            setFittingMessage("신체 포즈 감지 준비 중...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 취소 확인
+            if (fittingCancelRef.current) {
+                console.log("[프론트] 가상 피팅 로딩 취소됨 (detecting)");
+                return;
+            }
+            
+            setFittingStage("ready");
+            setFittingProgress(100);
+            setFittingMessage("가상 피팅 준비 완료!");
+            
+            // 로딩 완료
+            setTimeout(() => {
+                // 취소 확인
+                if (fittingCancelRef.current) {
+                    console.log("[프론트] 가상 피팅 시작 취소됨 (ready)");
+                    return;
+                }
+                
+                setFittingLoading(false);
+                setIsFittingMode(true);
+                
+                // 첫 프레임 플래그 초기화
+                isFirstFrameRef.current = true;
+                
+                // 실시간 프레임 전송 시작 (25ms 간격 = 40 FPS)
+                fittingIntervalRef.current = setInterval(() => {
+                    sendFittingFrame();
+                }, 25);
+            }, 800);
+            
+        } catch (error) {
+            console.error("[프론트] 가상 피팅 시작 실패:", error);
+            alert("가상 피팅 시작 실패: " + error.message);
+            setFittingLoading(false);
+            setFittingStage("idle");
+        }
     };
     
     // 가상 피팅 중지
-    const stopVirtualFitting = () => {
+    const stopVirtualFitting = async () => {
         console.log("[프론트] 가상 피팅 중지");
+        
+        // 로딩 중이면 취소 플래그 설정
+        if (fittingLoading) {
+            console.log("[프론트] 가상 피팅 로딩 취소 요청");
+            fittingCancelRef.current = true;
+            setFittingLoading(false);
+            setFittingStage("idle");
+            setFittingProgress(0);
+            setFittingMessage("");
+        }
+        
+        // 피팅 모드가 활성화되어 있으면 백엔드에 스트리밍 중지 요청
+        if (isFittingMode) {
+            try {
+                await fetch("/api/fit/stop-streaming", {
+                    method: "POST"
+                });
+                console.log("[프론트] 스트리밍 중지 요청 완료");
+            } catch (error) {
+                console.error("[프론트] 스트리밍 중지 요청 실패:", error);
+            }
+        }
+        
+        // 피팅 모드 종료
         setIsFittingMode(false);
         setFittingFrame(null);
         
+        // 첫 프레임 플래그 리셋
+        isFirstFrameRef.current = true;
+        
+        // 인터벌 정리
         if (fittingIntervalRef.current) {
             clearInterval(fittingIntervalRef.current);
             fittingIntervalRef.current = null;
@@ -524,7 +695,8 @@ function Main() {
     
     // 입어보기 버튼 클릭 (실시간 가상 피팅)
     const handleStartFit = () => {
-        if (isFittingMode) {
+        // 로딩 중이거나 피팅 모드일 때 중지
+        if (fittingLoading || isFittingMode) {
             stopVirtualFitting();
         } else {
             startVirtualFitting();
@@ -802,19 +974,20 @@ function Main() {
                 <div className="mt-3 d-flex justify-content-center gap-3">
                     
                     <Button
-                        variant={isListening ? "warning": "danger"}
+                        variant={sessionStorage.getItem("user") ? "info" : "danger"}
                         onClick={isListening ? handleStop : handleStart}
                         className="px-4 py-2"
+                        disabled={!sessionStorage.getItem("user")}
                     >
                         {isListening ? "인식중지" : "질문하기"}
                     </Button>
                     <Button
-                        variant="primary"
-                        onClick={handleClothSave}
-                        disabled={uploading || !!timerRef.current}
+                        variant={(uploading || pendingAction === "cloth") ? "danger" : "primary"}
+                        onClick={(uploading || pendingAction === "cloth") ? stopAllActions : handleClothSave}
+                        disabled={uploading || !!timerRef.current || !sessionStorage.getItem("user")}
                         className="px-4 py-2"
                     >
-                        옷저장
+                        {(uploading || pendingAction === "cloth") ? "저장취소" : "옷저장"}
                     </Button>
                     {/* <input
                         ref={fileInputRef}
@@ -836,19 +1009,32 @@ function Main() {
                         옷저장
                     </label> */}
                     <Button
-                        variant={isFittingMode ? "success" : "warning"}
+                        variant={fittingLoading || isFittingMode ? "danger" : "warning"}
                         onClick={handleStartFit}
-                        disabled={!isRunning || uploading}
+                        disabled={!isRunning || uploading || !sessionStorage.getItem("user")}
                         className="px-4 py-2"
                     >
-                        {isFittingMode ? "피팅 중지" : "입어보기"}
+                        {fittingLoading ? "로딩취소" : isFittingMode ? "피팅중지" : "입어보기"}
                     </Button>
                     <Button
-                        variant="secondary"
-                        onClick={stopCapture}
+                        variant={(isListening || fittingLoading || isFittingMode || uploading || pendingAction) ? "danger" : "secondary"}
+                        onClick={stopAllActions}
+                        disabled={
+                            !isListening && 
+                            !fittingLoading && 
+                            !isFittingMode && 
+                            !uploading && 
+                            !timerRef.current &&
+                            !pendingAction
+                        }
                         className="px-4 py-2"
+                        style={{
+                            fontWeight: (isListening || fittingLoading || isFittingMode || uploading || pendingAction) ? "bold" : "normal"
+                        }}
                     >
-                        정지
+                        {(isListening || fittingLoading || isFittingMode || uploading || pendingAction) 
+                            ? "중지" 
+                            : "정지"}
                     </Button>
                 </div>
                 {/* {voicetext} */}
@@ -870,6 +1056,17 @@ function Main() {
             </Col>
             </Row>
         </Container>
+
+        {/* 가상 피팅 로딩 오버레이 */}
+        <VirtualFittingLoader
+            isLoading={fittingLoading}
+            stage={fittingStage}
+            progress={fittingProgress}
+            message={fittingMessage}
+            showSkeleton={showSkeleton}
+            useWarp={useWarp}
+            onCancel={stopVirtualFitting}
+        />
 
         {/* 숨김 캔버스 (캡처용) */}
         <canvas ref={canvasRef} style={{ display: "none" }} />

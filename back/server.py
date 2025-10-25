@@ -3,7 +3,6 @@ from flask_cors import CORS
 from config import Config
 from db_ import db, init_db
 from routes.users import users_bp
-from routes.member_test import members_bp
 from chat.langspeech_openai_chroma import chat_bp
 from db_files.auth_db import auth_bp
 from routes.clothes import clothes_bp, initialize_models
@@ -31,8 +30,7 @@ def create_app():
     CORS(app,resources={r"/api/*": {"origins": ["https://localhost:3000", "https://127.0.0.1:3000"]}})
     app.url_map.strict_slashes = False
     
-    # 사용
-    app.register_blueprint(members_bp)
+    # Blueprint 등록
     app.register_blueprint(users_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(clothes_bp)
@@ -63,10 +61,25 @@ if __name__ == "__main__":
     except Exception as e:
         print("[server.py] 모델 초기화 오류: " + str(e) + "\n")
 
-    app.run(
-        host='0.0.0.0',
-        port=5000,
-        debug=False,
-        use_reloader=False,
-        ssl_context='adhoc'  # ← HTTPS 지원
-    )
+    # 가상 피팅 초기화는 건너뛰기 (mmengine 이슈)
+    print("[server.py] 가상 피팅 초기화 건너뛰기 (별도 초기화 필요)\n")
+
+    # HTTPS 시도, 실패 시 HTTP로 폴백
+    try:
+        print("[server.py] HTTPS 모드로 서버 시작 시도...")
+        app.run(
+            host='0.0.0.0',
+            port=5000,
+            debug=False,
+            use_reloader=False,
+            ssl_context='adhoc'  # ← HTTPS 지원
+        )
+    except Exception as e:
+        print(f"[server.py] HTTPS 시작 실패: {e}")
+        print("[server.py] HTTP 모드로 서버 재시작...")
+        app.run(
+            host='0.0.0.0',
+            port=5000,
+            debug=False,
+            use_reloader=False
+        )
