@@ -36,24 +36,46 @@ function Main() {
     const [fittingMessage, setFittingMessage] = useState("");
     const fittingCancelRef = useRef(false); // 취소 플래그
 
-    // 스크롤 차단
+    // 세션 확인 상태 추가
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isSessionChecked, setIsSessionChecked] = useState(false);
+
+    // 페이지 로드 시 세션 확인
     useEffect(() => {
-        const prevHtmlOverflow  = document.documentElement.style.overflow;
-        const prevBodyOverflow  = document.body.style.overflow;
-        const prevBodyHeight    = document.body.style.height;
-
-        document.documentElement.style.overflow = "hidden";
-        document.body.style.overflow = "hidden";
-        document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
-
-        return () => {
-            document.documentElement.style.overflow = prevHtmlOverflow;
-            document.body.style.overflow = prevBodyOverflow;
-            document.body.style.height   = prevBodyHeight;
-            cleanupTimers();
-            stopCamera();
+        const checkSession = async () => {
+            try {
+                const res = await fetch("/api/auth/me");
+                const data = await res.json();
+                console.log("[프론트] 세션 확인:", data);
+                setIsLoggedIn(data.authenticated || false);
+            } catch (error) {
+                console.error("[프론트] 세션 확인 실패:", error);
+                setIsLoggedIn(false);
+            } finally {
+                setIsSessionChecked(true);
+            }
         };
+        checkSession();
     }, []);
+
+    // 스크롤 차단
+    // useEffect(() => {
+    //     const prevHtmlOverflow  = document.documentElement.style.overflow;
+    //     const prevBodyOverflow  = document.body.style.overflow;
+    //     const prevBodyHeight    = document.body.style.height;
+
+    //     document.documentElement.style.overflow = "hidden";
+    //     document.body.style.overflow = "hidden";
+    //     document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
+
+    //     return () => {
+    //         document.documentElement.style.overflow = prevHtmlOverflow;
+    //         document.body.style.overflow = prevBodyOverflow;
+    //         document.body.style.height   = prevBodyHeight;
+    //         cleanupTimers();
+    //         stopCamera();
+    //     };
+    // }, []);
 
     const cameraFrame = {
         background: "linear-gradient(45deg, #667eea 0%, #764ba2 100%)",
@@ -406,7 +428,15 @@ function Main() {
     };
     
     // 옷저장 전용 함수
+    // 옷저장 버튼 - 로그인 확인 추가
     const uploadClothes = async () => {
+        // 로그인 확인
+        if (!isLoggedIn) {
+            alert("로그인이 필요합니다!");
+            navigate("/login");
+            return;
+        }
+
         console.log("[프론트] 옷저장 시작");
 
         if (uploading || timerRef.current) {
@@ -980,9 +1010,10 @@ function Main() {
                         {isListening ? "인식중지" : "질문하기"}
                     </Button>
                     <Button
-                        variant={(uploading || pendingAction === "cloth") ? "danger" : "primary"}
-                        onClick={(uploading || pendingAction === "cloth") ? stopAllActions : handleClothSave}
-                        disabled={uploading || !!timerRef.current}
+                        variant="primary"
+                        onClick={handleClothSave}
+                        disabled={uploading || !!timerRef.current || !isSessionChecked || !isLoggedIn}
+                        title={!isLoggedIn ? "로그인이 필요합니다" : ""}
                         className="px-4 py-2"
                     >
                         {(uploading || pendingAction === "cloth") ? "저장취소" : "옷저장"}
