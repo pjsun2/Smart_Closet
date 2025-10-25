@@ -1,9 +1,159 @@
 import sqlite3
 import os
 from datetime import datetime
-from flask import session
+from flask import session, jsonify
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'smart_closet.db')
+
+def get_current_user_id():
+    """현재 세션의 사용자 ID 반환 (없으면 None)"""
+    user = session.get("user")
+    if not user:
+        return None
+    
+    # 이메일(user_id)로 DB의 User_id 조회
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT User_id FROM User WHERE User_email = ?", (user["id"],))
+    result = cursor.fetchone()
+    conn.close()
+    
+    return result[0] if result else None
+
+def insert_clothing_for_current_user(image_url, main_category, sub_category, attributes_dict):
+    """현재 세션 사용자의 옷 저장"""
+    user_id = get_current_user_id()
+    
+    if not user_id:
+        return jsonify(ok=False, message="로그인이 필요합니다."), 401
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        # 1. clothing_information 테이블에 INSERT
+        cursor.execute('''
+            INSERT INTO clothing_information 
+            (User_id, CI_imageURL, CI_mainCategory, CI_subCategory, CI_createDate, CI_check)
+            VALUES (?, ?, ?, ?, DATE('now'), ?)
+        ''', (user_id, image_url, main_category, sub_category, 1))
+        
+        ci_id = cursor.lastrowid
+        
+        # 2. clothing_attributes 테이블에 INSERT
+        for attr_name, attr_value in attributes_dict.items():
+            cursor.execute('SELECT A_id FROM attributes WHERE A_name = ?', (attr_name,))
+            result = cursor.fetchone()
+            
+            if result:
+                a_id = result[0]
+                cursor.execute('''
+                    INSERT INTO clothing_attributes 
+                    (CI_id, A_id, CA_value, CA_updateDate)
+                    VALUES (?, ?, ?, DATE('now'))
+                ''', (ci_id, a_id, attr_value))
+        
+        conn.commit()
+        print(f"[DB] 사용자 {user_id}의 옷 저장 완료! (CI_id: {ci_id})")
+        return jsonify(ok=True, ci_id=ci_id)
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] 옷 저장 실패: {e}")
+        return jsonify(ok=False, message="옷 저장에 실패했습니다."), 500
+    finally:
+        conn.close()
+
+def get_current_user_clothing():
+    """현재 세션 사용자의 모든 옷 조회"""
+    user_id = get_current_user_id()
+    
+    if not user_id:
+        return jsonify(ok=False, message="로그인이 필요합니다.", authenticated=False), 401
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+            SELECT CI_id, CI_imageURL, CI_mainCategory, CI_subCategory, CI_createDate
+            FROM clothing_information
+            WHERE User_id = ?
+            ORDER BY CI_createDate DESC
+        ''', (user_id,))
+        
+        clothing_list = cursor.fetchall()
+        result = []
+        
+        for clothing in clothing_list:
+            ci_id, image_url, main_category, sub_category, create_date = clothing
+            
+            # 각 의류의 속성 조회
+            cursor.execute('''
+                SELECT a.A_name, ca.CA_value
+                FROM clothing_attributes ca
+                JOIN attributes a ON ca.A_id = a.A_id
+                WHERE ca.CI_id = ?
+            ''', (ci_id,))
+            
+            attributes = cursor.fetchall()
+            details = {attr_name: attr_value for attr_name, attr_value in attributes}
+            
+            result.append({
+                'id': ci_id,
+                'main_category': main_category,
+                'sub_category': sub_category,
+                'details': details,
+                'created_at': create_date,
+                'image_url': image_url
+            })
+        
+        print(f"[DB] 사용자 {user_id}의 옷 {len(result)}개 조회 완료")
+        return jsonify(ok=True, clothing=result)
+        
+    except Exception as e:
+        print(f"[DB] 조회 실패: {e}")
+        return jsonify(ok=False, message="조회에 실패했습니다."), 500
+    finally:
+        conn.close()
+
+def delete_current_user_clothing(ci_id):
+    """현재 세션 사용자의 옷 삭제 (소유권 확인)"""
+    user_id = get_current_user_id()
+    
+    if not user_id:
+        return jsonify(ok=False, message="로그인이 필요합니다."), 401
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        # 1. 해당 의류가 현재 사용자의 소유인지 확인
+        cursor.execute('SELECT User_id FROM clothing_information WHERE CI_id = ?', (ci_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify(ok=False, message="존재하지 않는 의류입니다."), 404
+        
+        if result[0] != user_id:
+            return jsonify(ok=False, message="삭제 권한이 없습니다."), 403
+        
+        # 2. clothing_attributes에서 삭제
+        cursor.execute('DELETE FROM clothing_attributes WHERE CI_id = ?', (ci_id,))
+        
+        # 3. clothing_information에서 삭제
+        cursor.execute('DELETE FROM clothing_information WHERE CI_id = ?', (ci_id,))
+        
+        conn.commit()
+        print(f"[DB] 사용자 {user_id}의 CI_id {ci_id} 삭제 완료")
+        return jsonify(ok=True)
+        
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] 삭제 실패: {e}")
+        return jsonify(ok=False, message="삭제에 실패했습니다."), 500
+    finally:
+        conn.close()
 
 def insert_user(email, password, nickname):
     """사용자 정보를 DB에 저장"""
@@ -58,7 +208,7 @@ def get_all_users():
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT User_id, User_email, User_nickname, User_createDate, User_updateDate FROM User
+        SELECT User_id, User_email, User_password, User_nickname, User_createDate, User_updateDate, User_gender FROM User
     ''')
     
     users = cursor.fetchall()
@@ -408,7 +558,7 @@ def insert_test_data():
             conn.commit()
             print("테스트 사용자 생성 완료")
         
-        user_id = 1
+        user_id = 16
         
         # 2. 속성 데이터가 없으면 먼저 생성
         cursor.execute('SELECT COUNT(*) FROM attributes')
