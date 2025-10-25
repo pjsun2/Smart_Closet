@@ -3,45 +3,45 @@ chcp 65001 > nul
 title Smart Closet - Backend Server
 
 echo ========================================
-echo   Smart Closet Backend Server 시작
+echo   Smart Closet Backend Server Start
 echo ========================================
 echo.
 
 cd /d "%~dp0"
 
-echo [1/3] 가상환경 활성화 중...
+echo [1/3] Activating virtual environment...
 call .venv309\Scripts\activate.bat
 if errorlevel 1 (
     echo.
-    echo 오류: 가상환경을 찾을 수 없습니다.
-    echo    .venv309 폴더가 있는지 확인하세요.
+    echo ERROR: Virtual environment not found.
+    echo        Please check if .venv309 folder exists.
     echo.
     pause
     exit /b 1
 )
-echo ✓ 가상환경 활성화 완료
+echo [OK] Virtual environment activated
 echo.
 
-echo [2/3] 백엔드 디렉토리로 이동...
+echo [2/3] Moving to backend directory...
 cd back
 if errorlevel 1 (
     echo.
-    echo 오류: back 폴더를 찾을 수 없습니다.
+    echo ERROR: back folder not found.
     echo.
     pause
     exit /b 1
 )
-echo ✓ 디렉토리 이동 완료
+echo [OK] Directory changed
 echo.
 
-echo [3/3] Flask 서버 시작 중...
+echo [3/3] Starting Flask server...
 echo.
 echo ========================================
-echo 백엔드 서버가 시작됩니다.
+echo Backend server is starting.
 echo.
-echo 주소: https://localhost:5000
+echo URL: https://localhost:5000
 echo.
-echo 종료하려면 Ctrl+C를 누르세요.
+echo Press Ctrl+C to stop.
 echo ========================================
 echo.
 
@@ -49,7 +49,7 @@ python server.py
 
 if errorlevel 1 (
     echo.
-    echo 오류: 서버 시작에 실패했습니다.
+    echo ERROR: Server failed to start.
     echo.
     pause
 )

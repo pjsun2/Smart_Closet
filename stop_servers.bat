@@ -1,47 +1,47 @@
 @echo off
 chcp 65001 > nul
-title Smart Closet - 서버 종료
+title Smart Closet - Stop Servers
 
 echo.
 echo ========================================
-echo      Smart Closet 서버 종료 중...
+echo      Stopping Smart Closet Servers...
 echo ========================================
 echo.
 
-echo 실행 중인 서버 확인 중...
+echo Checking running servers...
 echo.
 
-echo [1/2] Flask 백엔드 서버 종료 중...
+echo [1/2] Stopping Flask backend server...
 taskkill /F /FI "WINDOWTITLE eq Smart Closet Backend*" 2>nul
 if errorlevel 1 (
-    echo   ⚠ 실행 중인 백엔드 서버가 없습니다.
+    echo   [WARNING] No backend server running.
 ) else (
-    echo   ✓ 백엔드 서버 종료 완료
+    echo   [OK] Backend server stopped
 )
 
 echo.
-echo [2/2] React 프론트엔드 서버 종료 중...
+echo [2/2] Stopping React frontend server...
 taskkill /F /FI "WINDOWTITLE eq Smart Closet Frontend*" 2>nul
 if errorlevel 1 (
-    echo   ⚠ 실행 중인 프론트엔드 서버가 없습니다.
+    echo   [WARNING] No frontend server running.
 ) else (
-    echo   ✓ 프론트엔드 서버 종료 완료
+    echo   [OK] Frontend server stopped
 )
 
 echo.
-echo 잔여 프로세스 정리 중...
-:: Node.js 프로세스 강제 종료 (혹시 모를 잔여 프로세스)
+echo Cleaning up remaining processes...
+:: Kill Node.js processes (just in case)
 taskkill /F /IM node.exe 2>nul
 if not errorlevel 1 (
-    echo   ✓ Node.js 프로세스 정리 완료
+    echo   [OK] Node.js processes cleaned
 )
 
-:: Python 서버 프로세스 강제 종료
+:: Kill Python server processes
 taskkill /F /IM python.exe /FI "WINDOWTITLE eq *server.py*" 2>nul
 
 echo.
 echo ========================================
-echo      ✓ 모든 서버가 종료되었습니다.
+echo      [OK] All servers stopped.
 echo ========================================
 echo.
 timeout /t 2 > nul
