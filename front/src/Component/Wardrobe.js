@@ -106,12 +106,12 @@ function Wardrobe() {
 
     const getClothingIcon = (category) => {
         const icons = {
-            '상의': '👕',
-            '하의': '👖',
-            '아우터': '🧥',
-            '원피스': '👗'
+            '상의': '[상의]',
+            '하의': '[하의]',
+            '아우터': '[아우터]',
+            '원피스': '[원피스]'
         };
-        return icons[category] || '👔';
+        return icons[category] || '[옷]';
     };
 
     // 필터링된 옷 목록
