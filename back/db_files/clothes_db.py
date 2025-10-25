@@ -463,6 +463,7 @@ def check_database_contents():
     
     conn.close()
 
+# llm에 넣어서 처리
 def get_user_clothing_with_attributes(user_id):
     """사용자의 모든 옷과 속성을 조회"""
     conn = sqlite3.connect(DB_PATH)
@@ -677,5 +678,6 @@ if __name__ == '__main__':
     # 테스트 데이터 삽입
     # insert_test_data()
 
-    # 특정 사용자의 옷과 속성 조회
-    get_user_clothing_with_attributes(16)
+    # 특정 사용자의 옷과 속성 조회, session 정보에 저장된 user_id를 검색함.
+    user = session.get['user']
+    get_user_clothing_with_attributes(user['useridseq']) 

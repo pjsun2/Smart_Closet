@@ -12,6 +12,8 @@ from langchain_core.documents import Document
 from typing import List, Optional
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.utils import secure_filename
+from db_files.clothes_db import get_user_clothing_with_attributes
+from flask import session
 
 import json
 import os
@@ -108,10 +110,11 @@ class FashionAssistant:
 
             다음 지침을 따라줘:
             1) 사용자의 질문을 이해하고, 현재 날씨와 상황을 고려해.
-            2) 핵심 키워드 5~6개(장소, 상황, 옷 종류 등)와 스타일 3~5개(힙합, 로맨틱, 모던, 클래식 등)를 뽑아.
+            2) 핵심 키워드는 5~6개(장소, 상황)과 스타일은 {cloth_attr} 에 있는 정보로 3~5개 키워드를 뽑아.
             3) 키워드와 스타일은 중복 없이 다양하게 선택해.
             4) 짧고 자연스러운 존댓말 추천 문구를 작성해.
             5) 사용자의 성별은 {gender} 야
+            6) 현재 날씨를 고려하여 옷 조합을 추천해줘
 
             {context}
 
@@ -198,13 +201,18 @@ class FashionAssistant:
         
         # 체인 구성 및 실행
         chain = self.final_prompt | self.llm | self.parser
+        user = session.get("user")
+        cloth_attr = get_user_clothing_with_attributes(user['useridseq'])
+        # print(cloth_attr)
+        # print(user)
         
         try:
             result = chain.invoke({
                 "input": user_text,
                 "context": context,
                 "format_instructions": self.parser.get_format_instructions(),
-                "gender": ""
+                "gender": user['gender'],
+                "cloth_attr": cloth_attr
             })
         except Exception as e:
             print(f"파싱 오류: {e}")
@@ -215,7 +223,8 @@ class FashionAssistant:
                 "input": user_text,
                 "context": context,
                 "format_instructions": "",
-                "gender": ""
+                "gender": "",
+                "cloth_attr": ""
             })
             result = result.dict()
         

@@ -95,7 +95,8 @@ const convertToDbFormat = (clothingItem) => {
                             main_category: clothingItem.main_category,
                             sub_category: clothingItem.details.카테고리 || '기타',  // ← 수정
                             attributes: attributes
-                        })
+                        }),
+                        credentials: "include"
                     });
 
                     if (res.ok) {

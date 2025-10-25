@@ -1002,10 +1002,12 @@ function Main() {
 
                 {/* 버튼: 가운데 정렬 */}
                 <div className="mt-3 d-flex justify-content-center gap-3">
+                    
                     <Button
-                        variant={isListening ? "danger" : "info"}
+                        variant={sessionStorage.getItem("user") ? "info" : "danger"}
                         onClick={isListening ? handleStop : handleStart}
                         className="px-4 py-2"
+                        disabled={!sessionStorage.getItem("user")}
                     >
                         {isListening ? "인식중지" : "질문하기"}
                     </Button>
@@ -1040,7 +1042,7 @@ function Main() {
                     <Button
                         variant={fittingLoading || isFittingMode ? "danger" : "warning"}
                         onClick={handleStartFit}
-                        disabled={!isRunning || uploading}
+                        disabled={!isRunning || uploading || !sessionStorage.getItem("user")}
                         className="px-4 py-2"
                     >
                         {fittingLoading ? "로딩취소" : isFittingMode ? "피팅중지" : "입어보기"}
