@@ -1,0 +1,278 @@
+/* 가상 피팅 로더 스타일 */
+
+.virtual-fitting-loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.virtual-fitting-loader-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.4s ease-out;
+}
+
+/* 스피너 */
+.loader-spinner-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.loader-spinner {
+    width: 80px;
+    height: 80px;
+    border-width: 6px;
+    color: white;
+}
+
+.spinner-glow {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* 텍스트 */
+.loader-title {
+    color: white;
+    text-align: center;
+    margin-bottom: 15px;
+    font-weight: 700;
+    font-size: 24px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.loader-message {
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 16px;
+}
+
+/* 진행률 바 */
+.loader-progress {
+    margin-bottom: 30px;
+}
+
+.loader-progress .progress {
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.loader-progress .progress-bar {
+    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    transition: width 0.5s ease;
+}
+
+/* 체크리스트 */
+.loader-checklist {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
+}
+
+.checklist-item.current {
+    color: white;
+    font-weight: 600;
+}
+
+.checklist-item.complete {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.checklist-icon {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+}
+
+.icon-check {
+    color: #4ade80;
+    font-size: 20px;
+    font-weight: bold;
+    animation: checkIn 0.3s ease-out;
+}
+
+.icon-pending {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 20px;
+}
+
+.checklist-label {
+    flex: 1;
+    font-size: 14px;
+}
+
+/* 설정 정보 */
+.loader-settings {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.setting-badge {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.setting-badge.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* 팁 */
+.loader-tip {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    text-align: center;
+    margin-bottom: 0;
+}
+
+.loader-tip small {
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.3;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.6;
+    }
+}
+
+@keyframes checkIn {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 취소 버튼 */
+.loader-cancel-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.loader-cancel-btn {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 40px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.loader-cancel-btn:hover {
+    background: rgba(255, 59, 48, 0.8);
+    border-color: rgba(255, 59, 48, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 59, 48, 0.4);
+}
+
+.loader-cancel-btn:active {
+    transform: translateY(0);
+}
+
+/* 반응형 */
+@media (max-width: 576px) {
+    .virtual-fitting-loader-container {
+        padding: 30px 20px;
+    }
+
+    .loader-title {
+        font-size: 20px;
+    }
+
+    .loader-message {
+        font-size: 14px;
+    }
+
+    .loader-spinner {
+        width: 60px;
+        height: 60px;
+    }
+
+    .spinner-glow {
+        width: 80px;
+        height: 80px;
+    }
+
+    .loader-cancel-btn {
+        padding: 10px 30px;
+        font-size: 14px;
+    }
+}

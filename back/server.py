@@ -63,6 +63,15 @@ if __name__ == "__main__":
     except Exception as e:
         print("[server.py] 모델 초기화 오류: " + str(e) + "\n")
 
+    # 가상 피팅 백그라운드 초기화
+    print("[server.py] 가상 피팅 백그라운드 초기화 중...")
+    try:
+        from routes.clothes import initialize_virtual_fitting
+        initialize_virtual_fitting()
+        print("[server.py] 가상 피팅 백그라운드 초기화 완료\n")
+    except Exception as e:
+        print("[server.py] 가상 피팅 초기화 오류: " + str(e) + "\n")
+
     app.run(
         host='0.0.0.0',
         port=5000,

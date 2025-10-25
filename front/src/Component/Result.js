@@ -10,12 +10,12 @@ function Result() {
 
     const getClothingIcon = (category) => {
         const icons = {
-            '상의': '👕',
-            '하의': '👖',
-            '아우터': '🧥',
-            '원피스': '👗'
+            '상의': '[상의]',
+            '하의': '[하의]',
+            '아우터': '[아우터]',
+            '원피스': '[원피스]'
         };
-        return icons[category] || '👔';
+        return icons[category] || '[옷]';
     };
 
     const formatDetails = (details) => {
@@ -57,12 +57,12 @@ function Result() {
             // }
             
             // 임시: 저장 시뮬레이션
-            const userConfirm = window.confirm('✅ 옷장에 저장하시겠습니까?');
+            const userConfirm = window.confirm('옷장에 저장하시겠습니까?');
             
             if (userConfirm) {
                 console.log("[프론트] 저장할 데이터:", detected);
-                alert('✅ 옷장에 저장되었습니다!');
-                // ✅ OK 누르면 내 옷장 페이지로 이동
+                alert('옷장에 저장되었습니다!');
+                // OK 누르면 내 옷장 페이지로 이동
                 navigate('/wardrobe');
             } else {
                 console.log("[프론트] 저장 취소됨");

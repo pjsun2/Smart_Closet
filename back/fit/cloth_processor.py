@@ -8,6 +8,7 @@ import mediapipe as mp
 
 # MediaPipe 초기화
 mp_pose = mp.solutions.pose
+mp_selfie_segmentation = mp.solutions.selfie_segmentation
 
 # GPU 가속 옵션
 # 주의: pip로 설치한 opencv-contrib-python은 CUDA 지원 없이 빌드되어 있습니다.
@@ -19,6 +20,17 @@ print(f"[Cloth Processor] OpenCV CUDA 사용 가능: {OPENCV_CUDA_AVAILABLE}")
 if not OPENCV_CUDA_AVAILABLE:
     print("[Cloth Processor] OpenCV CUDA 미지원. CPU 모드로 실행됩니다.")
     print("[Cloth Processor] PyTorch, MediaPipe, rembg는 여전히 GPU를 사용합니다.")
+
+# 세그멘테이션 모델 초기화 (전역, 한 번만 초기화)
+_segmentation_model = None
+
+def get_segmentation_model():
+    """세그멘테이션 모델 싱글톤"""
+    global _segmentation_model
+    if _segmentation_model is None:
+        _segmentation_model = mp_selfie_segmentation.SelfieSegmentation(model_selection=1)
+        print("[Cloth Processor] 세그멘테이션 모델 초기화 완료")
+    return _segmentation_model
 
 def use_gpu_mat(img):
     """
@@ -448,53 +460,155 @@ def get_default_cloth_keypoints(w, h):
         'right_hip': (w * 0.70, h * 0.85),
     }
 
-def warp_cloth_to_pose(cloth_img, cloth_keypoints, body_keypoints, frame_shape):
+def get_body_segmentation_mask(frame, body_keypoints=None):
+    """
+    MediaPipe를 사용하여 신체 세그멘테이션 마스크 생성
+    
+    Args:
+        frame: 입력 프레임 (BGR)
+        body_keypoints: 신체 키포인트 (옵션, 상체만 마스크하는데 사용)
+    
+    Returns:
+        binary_mask: 신체 영역 마스크 (0 또는 255)
+    """
+    try:
+        segmentation = get_segmentation_model()
+        
+        # RGB로 변환
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # 세그멘테이션 수행
+        results = segmentation.process(frame_rgb)
+        
+        if results.segmentation_mask is None:
+            return None
+        
+        # 마스크를 이진화 (threshold: 0.5)
+        mask = results.segmentation_mask
+        binary_mask = (mask > 0.5).astype(np.uint8) * 255
+        
+        # 상체 영역만 추출 (body_keypoints가 있는 경우)
+        if body_keypoints and 'left_shoulder' in body_keypoints and 'right_shoulder' in body_keypoints:
+            h, w = frame.shape[:2]
+            
+            # 어깨 위치 기준으로 상체 영역 정의
+            left_shoulder = body_keypoints['left_shoulder']
+            right_shoulder = body_keypoints['right_shoulder']
+            
+            # 상체 영역: 어깨 위 20% ~ 엉덩이 아래 (또는 프레임 하단)
+            shoulder_y = int((left_shoulder[1] + right_shoulder[1]) / 2)
+            top_y = max(0, shoulder_y - int(h * 0.2))
+            
+            # 엉덩이가 있으면 그 위치, 없으면 어깨 아래 60%
+            if 'left_hip' in body_keypoints and 'right_hip' in body_keypoints:
+                hip_y = int((body_keypoints['left_hip'][1] + body_keypoints['right_hip'][1]) / 2)
+                bottom_y = min(h, hip_y + int(h * 0.1))
+            else:
+                bottom_y = min(h, shoulder_y + int(h * 0.6))
+            
+            # 마스크 생성 (상체 영역만)
+            torso_mask = np.zeros_like(binary_mask)
+            torso_mask[top_y:bottom_y, :] = binary_mask[top_y:bottom_y, :]
+            
+            return torso_mask
+        
+        return binary_mask
+    
+    except Exception as e:
+        print(f"[Cloth Processor] 세그멘테이션 실패: {e}")
+        return None
+
+def refine_cloth_with_segmentation(warped_cloth, frame, body_keypoints):
+    """
+    세그멘테이션 마스크를 사용하여 옷을 신체 윤곽에 맞게 정제
+    
+    Args:
+        warped_cloth: 변형된 옷 이미지 (RGBA, 프레임과 동일한 크기)
+        frame: 원본 프레임 (BGR)
+        body_keypoints: 신체 키포인트
+    
+    Returns:
+        refined_cloth: 세그멘테이션으로 정제된 옷 이미지 (RGBA)
+    """
+    try:
+        # 신체 세그멘테이션 마스크 생성
+        body_mask = get_body_segmentation_mask(frame, body_keypoints)
+        
+        if body_mask is None:
+            print("[Cloth Processor] 세그멘테이션 마스크 생성 실패, 원본 사용")
+            return warped_cloth
+        
+        # 옷의 알파 채널 추출
+        if warped_cloth.shape[2] == 4:
+            cloth_alpha = warped_cloth[:, :, 3]
+        else:
+            cloth_alpha = np.ones((warped_cloth.shape[0], warped_cloth.shape[1]), dtype=np.uint8) * 255
+        
+        # 신체 마스크와 옷 마스크의 교집합 (옷이 신체 영역에만 표시)
+        refined_alpha = cv2.bitwise_and(cloth_alpha, body_mask)
+        
+        # 모폴로지 연산으로 부드럽게
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        refined_alpha = cv2.morphologyEx(refined_alpha, cv2.MORPH_CLOSE, kernel)
+        refined_alpha = cv2.GaussianBlur(refined_alpha, (5, 5), 0)
+        
+        # 정제된 알파 채널 적용
+        refined_cloth = warped_cloth.copy()
+        if refined_cloth.shape[2] == 4:
+            refined_cloth[:, :, 3] = refined_alpha
+        else:
+            # BGR을 RGBA로 변환
+            refined_cloth = cv2.cvtColor(refined_cloth, cv2.COLOR_BGR2BGRA)
+            refined_cloth[:, :, 3] = refined_alpha
+        
+        print("[Cloth Processor] ✓ 세그멘테이션 기반 정제 완료")
+        return refined_cloth
+    
+    except Exception as e:
+        print(f"[Cloth Processor] 세그멘테이션 정제 실패: {e}")
+        return warped_cloth
+
+def warp_cloth_to_pose(cloth_img, cloth_keypoints, body_keypoints, frame_shape, use_segmentation=True, frame=None):
     """
     옷 이미지를 신체 포즈에 맞춰 변형(warp)합니다.
-    RTMPose 스타일의 3점 어파인 변환 사용 - 자연스러운 변형
+    세그멘테이션 기반 매칭으로 신체 윤곽에 정확하게 피팅
     
     Args:
         cloth_img: 옷 이미지 (RGBA)
-        cloth_keypoints: 옷의 키포인트 (left_shoulder, right_shoulder, neck_point 등)
+        cloth_keypoints: 옷의 키포인트 (left_shoulder, right_shoulder 등)
         body_keypoints: 신체의 키포인트 (left_shoulder, right_shoulder 등)
         frame_shape: 출력 프레임 크기 (height, width)
+        use_segmentation: 세그멘테이션 기반 정제 사용 여부 (기본: True)
+        frame: 원본 프레임 (세그멘테이션 사용 시 필요)
     
     Returns:
-        변형된 옷 이미지 (프레임과 동일한 크기)
+        변형된 옷 이미지 (프레임과 동일한 크기, RGBA)
     """
     frame_h, frame_w = frame_shape[:2]
     
-    # 1. 옷 이미지의 소스 포인트 설정
-    # 어깨 2개 + 중심점 1개 = 총 3점 (어파인 변환)
-    src_points = []
-    
-    # 옷의 어깨 포인트
-    if 'left_shoulder' in cloth_keypoints and 'right_shoulder' in cloth_keypoints:
-        cloth_left_shoulder = np.array(cloth_keypoints['left_shoulder'], dtype=np.float32)
-        cloth_right_shoulder = np.array(cloth_keypoints['right_shoulder'], dtype=np.float32)
-        
-        # 옷의 중심점 계산 (어깨 중간 + 아래로 오프셋)
-        cloth_mid_x = (cloth_left_shoulder[0] + cloth_right_shoulder[0]) / 2
-        cloth_mid_y = (cloth_left_shoulder[1] + cloth_right_shoulder[1]) / 2
-        
-        # 옷의 어깨 너비
-        cloth_shoulder_width = np.linalg.norm(cloth_left_shoulder - cloth_right_shoulder)
-        
-        # 중심점을 어깨 아래로 이동 (어깨 너비의 80% 비율, 최소 60px, 최대 150px)
-        vertical_offset = np.clip(cloth_shoulder_width * 0.8, 60, 150)
-        cloth_center = np.array([cloth_mid_x, cloth_mid_y + vertical_offset], dtype=np.float32)
-        
-        # 소스 포인트 배열
-        src_points = np.float32([
-            cloth_right_shoulder,  # [0] 오른쪽 어깨
-            cloth_left_shoulder,   # [1] 왼쪽 어깨
-            cloth_center           # [2] 중심점
-        ])
-    else:
+    # === 1. 옷 이미지의 소스 포인트 설정 (3점) ===
+    if 'left_shoulder' not in cloth_keypoints or 'right_shoulder' not in cloth_keypoints:
         print("[Cloth Processor] 옷의 어깨 키포인트 없음 - 변형 불가")
         return cloth_img
     
-    # 2. 신체의 목적지 포인트 설정
+    cloth_left_shoulder = np.array(cloth_keypoints['left_shoulder'], dtype=np.float32)
+    cloth_right_shoulder = np.array(cloth_keypoints['right_shoulder'], dtype=np.float32)
+    
+    # 옷의 중심점 계산
+    cloth_mid_x = (cloth_left_shoulder[0] + cloth_right_shoulder[0]) / 2
+    cloth_mid_y = (cloth_left_shoulder[1] + cloth_right_shoulder[1]) / 2
+    cloth_shoulder_width = np.linalg.norm(cloth_left_shoulder - cloth_right_shoulder)
+    
+    vertical_offset = np.clip(cloth_shoulder_width * 0.8, 60, 150)
+    cloth_center = np.array([cloth_mid_x, cloth_mid_y + vertical_offset], dtype=np.float32)
+    
+    src_points = np.float32([
+        cloth_right_shoulder,  # [0] 오른쪽 어깨
+        cloth_left_shoulder,   # [1] 왼쪽 어깨
+        cloth_center           # [2] 중심점
+    ])
+    
+    # === 2. 신체의 목적지 포인트 설정 (3점) ===
     if 'left_shoulder' not in body_keypoints or 'right_shoulder' not in body_keypoints:
         print("[Cloth Processor] 신체의 어깨 키포인트 없음 - 변형 불가")
         return cloth_img
@@ -502,40 +616,43 @@ def warp_cloth_to_pose(cloth_img, cloth_keypoints, body_keypoints, frame_shape):
     body_left_shoulder = np.array(body_keypoints['left_shoulder'], dtype=np.float32)
     body_right_shoulder = np.array(body_keypoints['right_shoulder'], dtype=np.float32)
     
-    # 신체의 어깨 중심
     body_mid_x = (body_left_shoulder[0] + body_right_shoulder[0]) / 2
     body_mid_y = (body_left_shoulder[1] + body_right_shoulder[1]) / 2
-    
-    # 신체의 어깨 너비
     body_shoulder_width = np.linalg.norm(body_left_shoulder - body_right_shoulder)
     
-    # 중심점을 어깨 아래로 이동 (어깨 너비의 80% 비율, 최소 60px, 최대 150px)
     body_vertical_offset = np.clip(body_shoulder_width * 0.8, 60, 150)
     body_center = np.array([body_mid_x, body_mid_y + body_vertical_offset], dtype=np.float32)
     
-    # 목적지 포인트 배열
     dst_points = np.float32([
         body_right_shoulder,  # [0] 오른쪽 어깨
         body_left_shoulder,   # [1] 왼쪽 어깨
         body_center           # [2] 중심점
     ])
     
-    # 3. 어파인 변환 행렬 계산 (3점 기반)
+    # === 3. 어파인 변환 ===
     try:
         M = cv2.getAffineTransform(src_points, dst_points)
+        
+        # 옷 이미지 변형
+        warped = cv2.warpAffine(
+            cloth_img, 
+            M, 
+            (frame_w, frame_h),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=(0, 0, 0, 0)
+        )
+        
+        # === 4. 세그멘테이션 기반 정제 (옵션) ===
+        if use_segmentation and frame is not None:
+            warped = refine_cloth_with_segmentation(warped, frame, body_keypoints)
+            print(f"[Cloth Processor] ✓ 세그멘테이션 매칭 완료 - 어깨: {body_shoulder_width:.1f}px")
+        else:
+            print(f"[Cloth Processor] ✓ 어파인 변환 완료 - 어깨: {body_shoulder_width:.1f}px")
+        
+        return warped
+        return warped
+        
     except Exception as e:
-        print(f"[Cloth Processor] 어파인 변환 행렬 계산 실패: {e}")
+        print(f"[Cloth Processor] 어파인 변환 실패: {e}")
         return cloth_img
-    
-    # 4. 옷 이미지 변형 (프레임 크기로)
-    warped = cv2.warpAffine(
-        cloth_img, 
-        M, 
-        (frame_w, frame_h),
-        flags=cv2.INTER_LINEAR,
-        borderMode=cv2.BORDER_CONSTANT,
-        borderValue=(0, 0, 0, 0)  # 투명 배경
-    )
-    
-    print(f"[Cloth Processor] 어파인 변환 완료 - 어깨 너비: {body_shoulder_width:.1f}px, 세로 오프셋: {body_vertical_offset:.1f}px")
-    return warped

@@ -13,7 +13,7 @@ print("="*70)
 # 1. PyTorch CUDA 상태
 print("\n[1] PyTorch CUDA 상태:")
 if torch.cuda.is_available():
-    print(f"  ✅ CUDA 사용 가능: {torch.cuda.get_device_name(0)}")
+    print(f"  [OK] CUDA 사용 가능: {torch.cuda.get_device_name(0)}")
     print(f"  - CUDA 버전: {torch.version.cuda}")
     print(f"  - 현재 메모리 사용: {torch.cuda.memory_allocated(0)/1024**2:.2f}MB")
     print(f"  - 최대 메모리 사용: {torch.cuda.max_memory_allocated(0)/1024**2:.2f}MB")
@@ -25,7 +25,7 @@ if torch.cuda.is_available():
     print(f"  - GPU 연산 테스트: 성공")
     print(f"  - 연산 후 메모리: {torch.cuda.memory_allocated(0)/1024**2:.2f}MB")
 else:
-    print("  ❌ CUDA 사용 불가")
+    print("  [FAIL] CUDA 사용 불가")
 
 # 2. OpenCV CUDA 상태
 print("\n[2] OpenCV CUDA 상태:")
@@ -34,12 +34,12 @@ print(f"  - CUDA 모듈 존재: {hasattr(cv2, 'cuda')}")
 if hasattr(cv2, 'cuda'):
     print(f"  - CUDA 디바이스 수: {cv2.cuda.getCudaEnabledDeviceCount()}")
     if cv2.cuda.getCudaEnabledDeviceCount() > 0:
-        print("  ✅ OpenCV CUDA 사용 가능")
+        print("  [OK] OpenCV CUDA 사용 가능")
     else:
-        print("  ⚠️ OpenCV CUDA 디바이스 없음 (CPU 모드)")
-        print("  → pip로 설치한 OpenCV는 CUDA가 비활성화되어 있습니다")
+        print("  [WARNING] OpenCV CUDA 디바이스 없음 (CPU 모드)")
+        print("  -> pip로 설치한 OpenCV는 CUDA가 비활성화되어 있습니다")
 else:
-    print("  ❌ OpenCV CUDA 모듈 없음")
+    print("  [FAIL] OpenCV CUDA 모듈 없음")
 
 # 3. MediaPipe 설정
 print("\n[3] MediaPipe 설정:")
