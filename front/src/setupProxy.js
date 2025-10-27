@@ -21,14 +21,15 @@ module.exports = function(app) {
     app.use(
         ['/api'],
         createProxyMiddleware({
-            target: 'https://localhost:5000',
+            target: 'http://localhost:5000', // HTTP로 변경 (백엔드가 HTTP 모드)
             changeOrigin: true,
             secure: false,
             timeout: 300000, // ← 5분 (300초)
             proxyTimeout: 300000,
             onProxyRes(proxyRes) {
-                if (proxyRes.headers.location?.startsWith('https://127.0.0.1:5000')) {
-                    proxyRes.headers.location = proxyRes.headers.location.replace('https://127.0.0.1:5000', '');
+                // HTTP로 변경
+                if (proxyRes.headers.location?.startsWith('http://127.0.0.1:5000')) {
+                    proxyRes.headers.location = proxyRes.headers.location.replace('http://127.0.0.1:5000', '');
                 }
             }
         })

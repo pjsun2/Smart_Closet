@@ -68,22 +68,11 @@ if __name__ == "__main__":
     # 가상 피팅 초기화는 건너뛰기 (mmengine 이슈)
     print("[server.py] 가상 피팅 초기화 건너뛰기 (별도 초기화 필요)\n")
 
-    # HTTPS 시도, 실패 시 HTTP로 폴백
-    try:
-        print("[server.py] HTTPS 모드로 서버 시작 시도...")
-        app.run(
-            host='0.0.0.0',
-            port=5000,
-            debug=False,
-            use_reloader=False,
-            ssl_context='adhoc'  # ← HTTPS 지원
-        )
-    except Exception as e:
-        print(f"[server.py] HTTPS 시작 실패: {e}")
-        print("[server.py] HTTP 모드로 서버 재시작...")
-        app.run(
-            host='0.0.0.0',
-            port=5000,
-            debug=False,
-            use_reloader=False
-        )
+    # HTTP 모드로 서버 시작 (HTTPS는 nginx/프록시에서 처리)
+    print("[server.py] HTTP 모드로 서버 시작...")
+    app.run(
+        host='0.0.0.0',
+        port=5000,
+        debug=False,
+        use_reloader=False
+    )
