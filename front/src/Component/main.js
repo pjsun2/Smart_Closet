@@ -785,6 +785,35 @@ function Main() {
         recognitionRef.current = recognition;
         recognition.start();
     }
+
+    // 위치 정보 가져오기 현재 실시간 날씨를 가져오기 위함.
+    const [location, setLocation] = useState({ lat: null, lon: null });
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            console.warn("이 브라우저는 위치 정보를 지원하지 않습니다.");
+            setLocation({ lat: 37.5665, lon: 126.9780 }); // 서울 기본값
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                console.log("위치정보 가져오기 성공:", lat, lon);
+                setLocation({ lat, lon });
+            },
+            (err) => {
+                console.warn("위치 정보 접근 실패:", err);
+                // 권한 거부 시 기본 좌표로 대체
+                setLocation({ lat: 37.5665, lon: 126.9780 });
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 0,
+            }
+        );
+    }, []);
     
     // 챗봇 결과 가져오는 post
     const postText = async (txt) => {
@@ -792,7 +821,11 @@ function Main() {
             const res = await fetch("/api/voice/stt", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: txt })
+                body: JSON.stringify({ 
+                    text: txt, 
+                    lat: location.lat,
+                    lon: location.lon,
+                })
             });
             if(!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
