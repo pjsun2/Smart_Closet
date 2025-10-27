@@ -50,6 +50,9 @@ export default function SignupModal({ show, onHide, onSignedUp }) {
             if (data.ok == true) {
                 setMsg({ type: "success", message: "회원가입이 완료되었습니다.\n 로그인 후 이용해주세요." });
                 setForm({ userId: "", password: "", name: "", gender: ""});
+                setTimeout(() => {
+                    onHide();
+                }, 1000);
             } else {
                 setMsg({
                     type: "danger",
@@ -68,88 +71,90 @@ export default function SignupModal({ show, onHide, onSignedUp }) {
     };
 
   return (
-    <Modal show={show} onHide={onHide} centered>
-        <Form onSubmit={handleSubmit}>
-            <Modal.Header closeButton>
-                <Modal.Title>회원가입</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                {msg.message && (
-                    <Alert
-                        variant={msg.type}
-                        className="mb-3 py-2"
-                        style={{ textAlign: "center", fontWeight: "bold" }}
-                    >
-                        {msg.message}
-                    </Alert>
-                )}
-                <Form.Group className="mb-3" controlId="signupUserId">
-                    <Form.Label>아이디</Form.Label>
-                    <Form.Control
-                        type="text"
-                        placeholder="아이디를 입력하세요"
-                        value={form.userId}
-                        onChange={handleChange("userId")}
-                        autoFocus
-                        required
-                    />
-                </Form.Group>
-
-                <Form.Group className="mb-3" controlId="signupPassword">
-                    <Form.Label>비밀번호</Form.Label>
-                    <Form.Control
-                        type="password"
-                        placeholder="비밀번호를 입력하세요"
-                        value={form.password}
-                        onChange={handleChange("password")}
-                        required
-                        minLength={6}
-                    />
-                    <Form.Text muted>비밀번호는 6자 이상을 권장합니다.</Form.Text>
-                </Form.Group>
-
-                <Form.Group className="mb-1" controlId="signupName">
-                    <Form.Label>이름</Form.Label>
-                    <Form.Control
-                        type="text"
-                        placeholder="이름을 입력하세요"
-                        value={form.name}
-                        onChange={handleChange("name")}
-                        required
-                    />
-                </Form.Group>
-                <Form.Group className="mb-3" controlId="signupGender">
-                    <Form.Label>성별</Form.Label>
-                    <div className="d-flex gap-3 mt-1">
-                        <Form.Check
-                            type="radio"
-                            label="남자"
-                            name="gender"
-                            value="남자"
-                            checked={form.gender === "남자"}
-                            onChange={handleChange("gender")}
+    <>
+        <Modal show={show} onHide={onHide} centered>
+            <Form onSubmit={handleSubmit}>
+                <Modal.Header closeButton>
+                    <Modal.Title>회원가입</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {msg.message && (
+                        <Alert
+                            variant={msg.type}
+                            className="mb-3 py-2"
+                            style={{ textAlign: "center", fontWeight: "bold" }}
+                        >
+                            {msg.message}
+                        </Alert>
+                    )}
+                    <Form.Group className="mb-3" controlId="signupUserId">
+                        <Form.Label>아이디</Form.Label>
+                        <Form.Control
+                            type="text"
+                            placeholder="아이디를 입력하세요"
+                            value={form.userId}
+                            onChange={handleChange("userId")}
+                            autoFocus
                             required
                         />
-                        <Form.Check
-                            type="radio"
-                            label="여자"
-                            name="gender"
-                            value="여자"
-                            checked={form.gender === "여자"}
-                            onChange={handleChange("gender")}
+                    </Form.Group>
+
+                    <Form.Group className="mb-3" controlId="signupPassword">
+                        <Form.Label>비밀번호</Form.Label>
+                        <Form.Control
+                            type="password"
+                            placeholder="비밀번호를 입력하세요"
+                            value={form.password}
+                            onChange={handleChange("password")}
+                            required
+                            minLength={6}
                         />
-                    </div>
-                </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="secondary" onClick={onHide} disabled={loading}>
-                    취소
-                </Button>
-                <Button type="submit" disabled={loading}>
-                    {loading ? <Spinner size="sm" animation="border" /> : "회원가입"}
-                </Button>
-            </Modal.Footer>
-        </Form>
-    </Modal>
+                        <Form.Text muted>비밀번호는 6자 이상을 권장합니다.</Form.Text>
+                    </Form.Group>
+
+                    <Form.Group className="mb-1" controlId="signupName">
+                        <Form.Label>이름</Form.Label>
+                        <Form.Control
+                            type="text"
+                            placeholder="이름을 입력하세요"
+                            value={form.name}
+                            onChange={handleChange("name")}
+                            required
+                        />
+                    </Form.Group>
+                    <Form.Group className="mb-3" controlId="signupGender">
+                        <Form.Label>성별</Form.Label>
+                        <div className="d-flex gap-3 mt-1">
+                            <Form.Check
+                                type="radio"
+                                label="남자"
+                                name="gender"
+                                value="남자"
+                                checked={form.gender === "남자"}
+                                onChange={handleChange("gender")}
+                                required
+                            />
+                            <Form.Check
+                                type="radio"
+                                label="여자"
+                                name="gender"
+                                value="여자"
+                                checked={form.gender === "여자"}
+                                onChange={handleChange("gender")}
+                            />
+                        </div>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={onHide} disabled={loading}>
+                        취소
+                    </Button>
+                    <Button type="submit" disabled={loading}>
+                        {loading ? <Spinner size="sm" animation="border" /> : "회원가입"}
+                    </Button>
+                </Modal.Footer>
+            </Form>
+        </Modal>
+    </>
   );
 }

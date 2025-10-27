@@ -9,97 +9,98 @@ function Wardrobe() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('전체');
     const [searchTerm, setSearchTerm] = useState('');
+    const [deletingId, setDeletingId] = useState(null);
+    
+    // 세션 확인 상태 추가
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isSessionChecked, setIsSessionChecked] = useState(false);
 
-    // DB에서 옷 목록 조회 (시뮬레이션)
+    // 페이지 로드 시 세션 확인
     useEffect(() => {
-        fetchClothes();
-    }, []);
+        const checkSession = async () => {
+            try {
+                const res = await fetch('/api/auth/me', {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                console.log('[프론트] 세션 확인:', data);
+                
+                if (data.authenticated) {
+                    setIsLoggedIn(true);
+                    // 세션 확인 후 옷 목록 조회
+                    await fetchClothes();
+                } else {
+                    setIsLoggedIn(false);
+                    setIsSessionChecked(true);
+                    // ✅ 1초 후 Main 페이지로 이동
+                    setTimeout(() => {
+                        alert('로그인이 필요합니다.');
+                        navigate('/');
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('[프론트] 세션 확인 실패:', error);
+                setIsLoggedIn(false);
+                setIsSessionChecked(true);
+                // ✅ 1초 후 Main 페이지로 이동
+                setTimeout(() => {
+                    alert('로그인이 필요합니다.');
+                    navigate('/');
+                }, 100);
+            }
+        };
+        
+        checkSession();
+    }, [navigate]);
 
+    // 세션의 사용자 옷만 조회
     const fetchClothes = async () => {
         try {
             setLoading(true);
             
-            // 목업 데이터 (DB에서 가져온 것처럼)
-            const mockClothes = [
-                {
-                    id: 1,
-                    main_category: "상의",
-                    details: {
-                        색상: "파란색",
-                        소재: "면",
-                        스타일: "캐주얼"
-                    },
-                    created_at: "2025-10-15",
-                    image_url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=500&fit=crop"
-                },
-                {
-                    id: 2,
-                    main_category: "하의",
-                    details: {
-                        색상: "검은색",
-                        소재: "데님",
-                        스타일: "캐주얼"
-                    },
-                    created_at: "2025-10-16",
-                    image_url: "https://via.placeholder.com/300x400?text=검은+하의"  // ✅ 추가
-                },
-                {
-                    id: 3,
-                    main_category: "아우터",
-                    details: {
-                        색상: "회색",
-                        소재: "울",
-                        스타일: "포멀"
-                    },
-                    created_at: "2025-10-14",
-                    image_url: "https://via.placeholder.com/300x400?text=회색+아우터"  // ✅ 추가
-                },
-                {
-                    id: 4,
-                    main_category: "상의",
-                    details: {
-                        색상: "흰색",
-                        소재: "면",
-                        스타일: "미니멀"
-                    },
-                    created_at: "2025-10-13",
-                    image_url: "https://via.placeholder.com/300x400?text=흰색+상의"  // ✅ 추가
-                },
-                {
-                    id: 5,
-                    main_category: "원피스",
-                    details: {
-                        색상: "빨간색",
-                        소재: "실크",
-                        스타일: "포멀"
-                    },
-                    created_at: "2025-10-12",
-                    image_url: "https://via.placeholder.com/300x400?text=빨간+원피스"  // ✅ 추가
-                },
-                {
-                    id: 6,
-                    main_category: "하의",
-                    details: {
-                        색상: "카키색",
-                        소재: "면",
-                        스타일: "캐주얼"
-                    },
-                    created_at: "2025-10-11",
-                    image_url: "https://via.placeholder.com/300x400?text=카키색+하의"  // ✅ 추가
+            const res = await fetch('/api/clothing/wardrobe', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            ];
+            });
             
-            // 실제 DB 연동 (나중에 이 부분 교체)
-            // const res = await fetch('/api/wardrobe');
-            // const data = await res.json();
-            // setClothes(data.clothes || []);
+            console.log('[프론트] 응답 상태:', res.status);
             
-            setClothes(mockClothes);
-            console.log('[프론트] 옷장 데이터:', mockClothes);
+            if (!res.ok) {
+                if (res.status === 401) {
+                    alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+                    navigate('/');
+                    return;
+                }
+                throw new Error(`옷 목록 조회 실패: ${res.status}`);
+            }
+            
+            const data = await res.json();
+            console.log('[프론트] 옷장 데이터:', data);
+            
+            if (data.ok && data.clothing) {
+                console.log('[프론트] clothing 배열:', data.clothing);
+                setClothes(data.clothing);
+            } else if (Array.isArray(data)) {
+                console.log('[프론트] 배열 직접 반환');
+                setClothes(data);
+            } else if (data.clothes) {
+                console.log('[프론트] clothes 배열:', data.clothes);
+                setClothes(data.clothes);
+            } else {
+                console.warn('[프론트] 예상치 못한 응답 형식:', data);
+                setClothes([]);
+            }
+            
         } catch (e) {
-            console.error('에러:', e);
+            console.error('[프론트] 에러:', e);
+            alert('옷 목록을 불러올 수 없습니다: ' + e.message);
+            setClothes([]);
         } finally {
             setLoading(false);
+            setIsSessionChecked(true);
         }
     };
 
@@ -117,24 +118,60 @@ function Wardrobe() {
     const filteredClothes = clothes.filter(item => {
         const matchCategory = filter === '전체' || item.main_category === filter;
         const matchSearch = item.main_category.includes(searchTerm) || 
-                          (item.details?.색상 || '').includes(searchTerm);
+                          Object.values(item.details || {}).some(val => 
+                              String(val).includes(searchTerm)
+                          );
         return matchCategory && matchSearch;
     });
 
     const deleteClothing = async (id) => {
-        if (window.confirm('정말 삭제하시겠습니까?')) {
-            try {
-                // 실제 DB 삭제 (나중에 활성화)
-                // const res = await fetch(`/api/clothes/${id}`, { method: 'DELETE' });
-                
-                // 목업: 배열에서 제거
-                setClothes(clothes.filter(item => item.id !== id));
-                alert('삭제되었습니다');
-            } catch (e) {
-                console.error('삭제 실패:', e);
+        if (!window.confirm('정말 삭제하시겠습니까?')) return;
+        
+        try {
+            setDeletingId(id);
+            
+            const res = await fetch(`/api/clothing/${id}`, { 
+                method: 'DELETE',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || '삭제 실패');
             }
+            
+            // 목록에서 제거
+            setClothes(clothes.filter(item => item.id !== id));
+            alert('삭제되었습니다');
+        } catch (e) {
+            console.error('삭제 실패:', e);
+            alert('삭제에 실패했습니다: ' + e.message);
+        } finally {
+            setDeletingId(null);
         }
     };
+
+    // ✅ 세션 확인 중이면 로딩 표시
+    if (!isSessionChecked) {
+        return (
+            <Container style={{ paddingTop: '80px', minHeight: '100vh' }}>
+                <div className="text-center mt-5">
+                    <Spinner animation="border" role="status">
+                        <span className="visually-hidden">세션 확인 중...</span>
+                    </Spinner>
+                    <p className="mt-3">세션을 확인하는 중...</p>
+                </div>
+            </Container>
+        );
+    }
+
+    // ✅ 로그인하지 않으면 빈 페이지 표시 (자동으로 Main으로 이동됨)
+    if (!isLoggedIn) {
+        return null;
+    }
 
     if (loading) {
         return (
@@ -204,7 +241,7 @@ function Wardrobe() {
                     {filteredClothes.map((item, index) => (
                         <Col key={index} md={6} lg={4}>
                             <Card className="clothing-card h-100 shadow-sm">
-                                {/* ✅ 이미지 표시 */}
+                                {/* 이미지 표시 */}
                                 <div className="image-container">
                                     <img 
                                         src={item.image_url} 
@@ -253,8 +290,14 @@ function Wardrobe() {
                                             size="sm"
                                             className="w-100"
                                             onClick={() => deleteClothing(item.id)}
+                                            disabled={deletingId === item.id}
                                         >
-                                            삭제
+                                            {deletingId === item.id ? (
+                                                <>
+                                                    <Spinner animation="border" size="sm" role="status" className="me-2" />
+                                                    삭제 중...
+                                                </>
+                                            ) : '삭제'}
                                         </Button>
                                     </div>
                                 </Card.Body>

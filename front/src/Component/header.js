@@ -10,6 +10,7 @@ function Header() {
     const [open, setOpen] = useState(false);
 
     const [showLogin, setShowLogin] = useState(false);
+    const [showSignup, setShowSignup] = useState(false);
     const [pendingAction, setPendingAction] = useState(null); // 'login' | null
 
     const [user, setUser] = useState(null);
@@ -73,7 +74,7 @@ function Header() {
 
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 1000);
-        return () => clearInterval(t); // ✅ 언마운트 시 정리
+        return () => clearInterval(t);
     }, []);
 
     // 한국 시간/표시
@@ -125,28 +126,6 @@ function Header() {
             fetchSession();
         }
     }, []);
-
-        // const fetchSession = async () => {
-        //     try {
-        //         const res = await fetch("/api/auth/me", {
-        //             credentials: "include",  // 세션 쿠키 포함
-        //         });
-        //         const data = await res.json();
-
-        //         if (data.ok && data.authenticated) {
-        //             setUser(data.user); // Flask의 session["user"] 값
-        //             console.log(user);
-        //         } else {
-        //             setUser(null);
-        //         }
-        //     } catch (err) {
-        //         console.error("세션 확인 실패:", err);
-        //         setUser(null);
-        //     } finally {
-        //         setLoading(false);
-        //     }
-        // };
-        // fetchSession();
 
     return (
         <>
@@ -219,8 +198,6 @@ function Header() {
                     </div>
                 </Container>
             </Navbar>
-
-            {/* 사이드 오프캔버스 */}
             <Offcanvas
                 show={open}
                 onHide={() => setOpen(false)}
@@ -286,23 +263,13 @@ function Header() {
                             <Button
                                 size="lg"
                                 onClick={() => {
-                                    setPendingAction("login"); // 로그인 의도 기록
-                                    setOpen(false);            // 먼저 사이드 패널 닫기
+                                    setPendingAction("login"); 
+                                    setOpen(false);            
                                 }}
                             >
                             로그인
                             </Button>
                         )}
-                        {/* <Button
-                            size="lg"
-                            variant="outline-primary"
-                            onClick={() => {
-                                // TODO: 원하는 동작
-                                setOpen(false);
-                            }}
-                        >
-                        코디 추천
-                        </Button> */}
                         <Button
                             size="lg"
                             variant="outline-primary"
@@ -320,6 +287,10 @@ function Header() {
             <LoginModal
                 show={showLogin}
                 onHide={() => setShowLogin(false)}
+                onOpenSignup={() => {
+                    setShowLogin(false);
+                    setShowSignup(true);
+                }}
             />
         </>
         // <Navbar fixed="top" bg="light" className="shadow-sm">

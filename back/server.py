@@ -3,6 +3,8 @@ from flask_cors import CORS
 from config import Config
 from db_ import db, init_db
 from routes.users import users_bp
+#from routes.member_test import members_bp
+from routes.clothing import clothing_bp
 from chat.langspeech_openai_chroma import chat_bp
 from db_files.auth_db import auth_bp
 from routes.clothes import clothes_bp, initialize_models
@@ -34,6 +36,8 @@ def create_app():
     app.register_blueprint(users_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(clothes_bp)
+    app.register_blueprint(clothing_bp)
+
     app.register_blueprint(auth_bp)
     
     app.config.from_object(Config)

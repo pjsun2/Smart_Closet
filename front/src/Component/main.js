@@ -36,24 +36,46 @@ function Main() {
     const [fittingMessage, setFittingMessage] = useState("");
     const fittingCancelRef = useRef(false); // 취소 플래그
 
-    // 스크롤 차단
+    // 세션 확인 상태 추가
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isSessionChecked, setIsSessionChecked] = useState(false);
+
+    // 페이지 로드 시 세션 확인
     useEffect(() => {
-        const prevHtmlOverflow  = document.documentElement.style.overflow;
-        const prevBodyOverflow  = document.body.style.overflow;
-        const prevBodyHeight    = document.body.style.height;
-
-        document.documentElement.style.overflow = "hidden";
-        document.body.style.overflow = "hidden";
-        document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
-
-        return () => {
-            document.documentElement.style.overflow = prevHtmlOverflow;
-            document.body.style.overflow = prevBodyOverflow;
-            document.body.style.height   = prevBodyHeight;
-            cleanupTimers();
-            stopCamera();
+        const checkSession = async () => {
+            try {
+                const res = await fetch("/api/auth/me");
+                const data = await res.json();
+                console.log("[프론트] 세션 확인:", data);
+                setIsLoggedIn(data.authenticated || false);
+            } catch (error) {
+                console.error("[프론트] 세션 확인 실패:", error);
+                setIsLoggedIn(false);
+            } finally {
+                setIsSessionChecked(true);
+            }
         };
+        checkSession();
     }, []);
+
+    // 스크롤 차단
+    // useEffect(() => {
+    //     const prevHtmlOverflow  = document.documentElement.style.overflow;
+    //     const prevBodyOverflow  = document.body.style.overflow;
+    //     const prevBodyHeight    = document.body.style.height;
+
+    //     document.documentElement.style.overflow = "hidden";
+    //     document.body.style.overflow = "hidden";
+    //     document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
+
+    //     return () => {
+    //         document.documentElement.style.overflow = prevHtmlOverflow;
+    //         document.body.style.overflow = prevBodyOverflow;
+    //         document.body.style.height   = prevBodyHeight;
+    //         cleanupTimers();
+    //         stopCamera();
+    //     };
+    // }, []);
 
     const cameraFrame = {
         background: "linear-gradient(45deg, #667eea 0%, #764ba2 100%)",
@@ -406,7 +428,15 @@ function Main() {
     };
     
     // 옷저장 전용 함수
+    // 옷저장 버튼 - 로그인 확인 추가
     const uploadClothes = async () => {
+        // 로그인 확인
+        if (!isLoggedIn) {
+            alert("로그인이 필요합니다!");
+            navigate("/login");
+            return;
+        }
+
         console.log("[프론트] 옷저장 시작");
 
         if (uploading || timerRef.current) {
@@ -755,6 +785,35 @@ function Main() {
         recognitionRef.current = recognition;
         recognition.start();
     }
+
+    // 위치 정보 가져오기 현재 실시간 날씨를 가져오기 위함.
+    const [location, setLocation] = useState({ lat: null, lon: null });
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            console.warn("이 브라우저는 위치 정보를 지원하지 않습니다.");
+            setLocation({ lat: 37.5665, lon: 126.9780 }); // 서울 기본값
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                console.log("위치정보 가져오기 성공:", lat, lon);
+                setLocation({ lat, lon });
+            },
+            (err) => {
+                console.warn("위치 정보 접근 실패:", err);
+                // 권한 거부 시 기본 좌표로 대체
+                setLocation({ lat: 37.5665, lon: 126.9780 });
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 8000,
+                maximumAge: 0,
+            }
+        );
+    }, []);
     
     // 챗봇 결과 가져오는 post
     const postText = async (txt) => {
@@ -762,7 +821,11 @@ function Main() {
             const res = await fetch("/api/voice/stt", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: txt })
+                body: JSON.stringify({ 
+                    text: txt, 
+                    lat: location.lat,
+                    lon: location.lon,
+                })
             });
             if(!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
@@ -972,17 +1035,20 @@ function Main() {
 
                 {/* 버튼: 가운데 정렬 */}
                 <div className="mt-3 d-flex justify-content-center gap-3">
+                    
                     <Button
-                        variant={isListening ? "danger" : "info"}
+                        variant={sessionStorage.getItem("user") ? "info" : "danger"}
                         onClick={isListening ? handleStop : handleStart}
                         className="px-4 py-2"
+                        disabled={!sessionStorage.getItem("user")}
                     >
                         {isListening ? "인식중지" : "질문하기"}
                     </Button>
                     <Button
-                        variant={(uploading || pendingAction === "cloth") ? "danger" : "primary"}
-                        onClick={(uploading || pendingAction === "cloth") ? stopAllActions : handleClothSave}
-                        disabled={uploading || !!timerRef.current}
+                        variant="primary"
+                        onClick={handleClothSave}
+                        disabled={uploading || !!timerRef.current || !isSessionChecked || !isLoggedIn}
+                        title={!isLoggedIn ? "로그인이 필요합니다" : ""}
                         className="px-4 py-2"
                     >
                         {(uploading || pendingAction === "cloth") ? "저장취소" : "옷저장"}
@@ -1009,7 +1075,7 @@ function Main() {
                     <Button
                         variant={fittingLoading || isFittingMode ? "danger" : "warning"}
                         onClick={handleStartFit}
-                        disabled={!isRunning || uploading}
+                        disabled={!isRunning || uploading || !sessionStorage.getItem("user")}
                         className="px-4 py-2"
                     >
                         {fittingLoading ? "로딩취소" : isFittingMode ? "피팅중지" : "입어보기"}

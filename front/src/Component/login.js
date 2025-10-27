@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import { Button, Modal, Form, Spinner } from "react-bootstrap";
 import SignupModal from "./signup";
 
-export default function LoginModal({ show, onHide }) {
+export default function LoginModal({ show, onHide, onOpenSignup  }) {
   const [form, setForm] = useState({ userId: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState({type: "", message: ""});
-  const [user, setUser] = useState(null); 
-
-  const [showSignup, setShowSignup] = useState(false);
+  const [user, setUser] = useState(null);
+  const [signupOpen, setSignupOpen] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,10 +85,7 @@ export default function LoginModal({ show, onHide }) {
             <Button 
               variant="danger"
               onClick={() => {
-                  onHide();           // 로그인 모달 닫기
-                  setTimeout(() => {  // 약간의 딜레이 후 회원가입 모달 열기
-                    setShowSignup(true);
-                  }, 200);
+                  setSignupOpen(true);
               }}
               >
               회원가입
@@ -98,15 +94,11 @@ export default function LoginModal({ show, onHide }) {
         </Form>
       </Modal>
       <SignupModal
-          show={showSignup}
-          onHide={() => setShowSignup(false)}
-          onSignedUp={() => {
-            // 회원가입 완료 후 로그인 모달 다시 열기
-            setShowSignup(false);
-            setTimeout(() => {
-              onHide(false);
-            }, 300);
-          }}
+        show={signupOpen}
+        onHide={() => setSignupOpen(false)}
+        onSignedUp={() => {
+          setSignupOpen(false);
+        }}
       />
     </>
   );
