@@ -93,10 +93,10 @@
 
 ---
 
-## 🔧 사용 기술 (예정)
+## 🔧 사용 기술
 - 🐍 Python, TensorFlow/PyTorch (AI/머신러닝)
 - 👁️ OpenCV, RTMPOSE (컴퓨터 비전)
-- 🌐 Flask/Django (백엔드)
+- 🌐 Flask/React(백엔드)
 - ⚛️ React/Three.js (프론트엔드 및 가상 피팅)
 - 🌦️ OpenWeather API (날씨 데이터 연동)
 
