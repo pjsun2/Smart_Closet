@@ -16,7 +16,6 @@ back/instance
 *.pyc
 __pycache__/
 
-requirements.txt
 tts_outputs/
 fashion_chroma_db/
 
