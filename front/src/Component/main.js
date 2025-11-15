@@ -59,23 +59,23 @@ function Main() {
     }, []);
 
     // 스크롤 차단
-    // useEffect(() => {
-    //     const prevHtmlOverflow  = document.documentElement.style.overflow;
-    //     const prevBodyOverflow  = document.body.style.overflow;
-    //     const prevBodyHeight    = document.body.style.height;
+    useEffect(() => {
+        const prevHtmlOverflow  = document.documentElement.style.overflow;
+        const prevBodyOverflow  = document.body.style.overflow;
+        const prevBodyHeight    = document.body.style.height;
 
-    //     document.documentElement.style.overflow = "hidden";
-    //     document.body.style.overflow = "hidden";
-    //     document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        document.body.style.height   = "100svh"; // 모바일 안전 뷰포트
 
-    //     return () => {
-    //         document.documentElement.style.overflow = prevHtmlOverflow;
-    //         document.body.style.overflow = prevBodyOverflow;
-    //         document.body.style.height   = prevBodyHeight;
-    //         cleanupTimers();
-    //         stopCamera();
-    //     };
-    // }, []);
+        return () => {
+            document.documentElement.style.overflow = prevHtmlOverflow;
+            document.body.style.overflow = prevBodyOverflow;
+            document.body.style.height   = prevBodyHeight;
+            cleanupTimers();
+            stopCamera();
+        };
+    }, []);
 
     const cameraFrame = {
         background: "linear-gradient(45deg, #667eea 0%, #764ba2 100%)",

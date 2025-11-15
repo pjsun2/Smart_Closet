@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Container, Button, Card, Row, Col } from 'react-bootstrap';
+import { useState } from 'react';
 import './Result.css';
 
 function Result() {
@@ -7,6 +8,7 @@ function Result() {
     const navigate = useNavigate();
     const detected = location.state?.detected;
     const image = location.state?.image;
+    // const [user, setUser] = useState(null);
 
     const getClothingIcon = (category) => {
         const icons = {
@@ -36,33 +38,36 @@ function Result() {
     };
 
     // 모델 결과를 DB 형식으로 변환
-const convertToDbFormat = (clothingItem) => {
-    const attributes = {};
-    
-    Object.entries(clothingItem.details).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-            // 스타일(확률이 있는 배열)인 경우 - Top 3로 변환
-            if (key === '스타일' && value.length > 0) {
-                value.slice(0, 3).forEach((item, index) => {
-                    const rank = index + 1;
-                    attributes[`추천 스타일 ${rank}순위`] = 
-                        `${item.name} (확률: ${(item.confidence * 100).toFixed(2)}%)`;
-                });
+    const convertToDbFormat = (clothingItem) => {
+        const attributes = {};
+        
+        Object.entries(clothingItem.details).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+                // 스타일(확률이 있는 배열)인 경우 - Top 3로 변환
+                if (key === '스타일' && value.length > 0) {
+                    value.slice(0, 3).forEach((item, index) => {
+                        const rank = index + 1;
+                        attributes[`추천 스타일 ${rank}순위`] = 
+                            `${item.name} (확률: ${(item.confidence * 100).toFixed(2)}%)`;
+                    });
+                } else {
+                    // 다른 배열 타입은 첫번째 값 사용
+                    attributes[key] = value[0]?.name || value.join(', ');
+                }
             } else {
-                // 다른 배열 타입은 첫번째 값 사용
-                attributes[key] = value[0]?.name || value.join(', ');
+                // 일반 문자열/숫자 값
+                attributes[key] = value;
             }
-        } else {
-            // 일반 문자열/숫자 값
-            attributes[key] = value;
-        }
-    });
-    
-    return attributes;
-};
+        });
+        
+        return attributes;
+    };
 
     // 옷장에 저장하는 함수
     const saveToWardrobe = async () => {
+
+        const user = sessionStorage.getItem("user");
+        console.log(user);
         try {
             console.log("[프론트] 옷장에 저장 시작");
             
@@ -90,7 +95,7 @@ const convertToDbFormat = (clothingItem) => {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            user_id: 1,
+                            user_id: user.useridseq,
                             image_url: image,
                             main_category: clothingItem.main_category,
                             sub_category: clothingItem.details.카테고리 || '기타',  // ← 수정
