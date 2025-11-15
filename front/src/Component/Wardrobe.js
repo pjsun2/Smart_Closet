@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Form, Spinner, Alert } from 'react-bootstrap';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination } from 'swiper/modules';
+
 import './Wardrobe.css';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 function Wardrobe() {
     const navigate = useNavigate();
@@ -187,15 +193,15 @@ function Wardrobe() {
     }
 
     return (
-        <Container style={{ paddingTop: '80px', paddingBottom: '40px', minHeight: '100vh' }}>
+        <Container style={{ paddingTop: '80px', paddingBottom: '40px', minHeight: '100vh' , maxWidth: '65%'}}>
             {/* 헤더 */}
-            <div className="wardrobe-header mb-4">
+            <div className="wardrobe-header mb-2">
                 <h1>내 옷장</h1>
                 <p className="text-muted">총 {filteredClothes.length}개의 옷</p>
             </div>
 
             {/* 필터 및 검색 */}
-            <Row className="mb-4">
+            <Row className="mb-2">
                 <Col md={6}>
                     <Form.Group>
                         <Form.Label>종류별 필터</Form.Label>
@@ -237,10 +243,94 @@ function Wardrobe() {
                     </Button>
                 </Alert>
             ) : (
-                <Row className="g-4 mb-5">
+                // <Row className="g-4 mb-5">
+                //     {filteredClothes.map((item, index) => (
+                //         <Col key={index} md={6} lg={4}>
+                //             <Card className="clothing-card h-100 shadow-sm">
+                //                 {/* 이미지 표시 */}
+                //                 <div className="image-container">
+                //                     <img 
+                //                         src={item.image_url} 
+                //                         alt={item.main_category}
+                //                         className="clothing-image"
+                //                         onError={(e) => {
+                //                             e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="400"%3E%3Crect fill="%23f0f0f0" width="300" height="400"/%3E%3Ctext x="50%" y="50%" font-size="14" fill="%23999" text-anchor="middle" dy=".3em"%3E이미지 없음%3C/text%3E%3C/svg%3E';
+                //                         }}
+                //                     />
+                //                 </div>
+
+                //                 <Card.Body>
+                //                     {/* 카테고리 */}
+                //                     <div className="category-header mb-3">
+                //                         <span className="clothing-icon">
+                //                             {getClothingIcon(item.main_category)}
+                //                         </span>
+                //                         <h5 className="category-name ms-2">
+                //                             {item.main_category}
+                //                         </h5>
+                //                     </div>
+
+                //                     {/* 세부 정보 */}
+                //                     <div className="details-section">
+                //                         {item.details && Object.entries(item.details).map(([key, value]) => {
+                //                             return (
+                //                                 <div key={key} className="detail-item">
+                //                                     <span className="detail-label">{key}:</span>
+                //                                     <span className="detail-value">{value}</span>
+                //                                 </div>
+                //                             );
+                //                         })}
+                //                     </div>
+
+                //                     {/* 등록 날짜 */}
+                //                     <div className="date-section mt-3 pt-3 border-top">
+                //                         <small className="text-muted">
+                //                             등록: {item.created_at}
+                //                         </small>
+                //                     </div>
+
+                //                     {/* 액션 버튼 */}
+                //                     <div className="action-buttons mt-3 pt-3 border-top">
+                //                         <Button 
+                //                             variant="danger" 
+                //                             size="sm"
+                //                             className="w-100"
+                //                             onClick={() => deleteClothing(item.id)}
+                //                             disabled={deletingId === item.id}
+                //                         >
+                //                             {deletingId === item.id ? (
+                //                                 <>
+                //                                     <Spinner animation="border" size="sm" role="status" className="me-2" />
+                //                                     삭제 중...
+                //                                 </>
+                //                             ) : '삭제'}
+                //                         </Button>
+                //                     </div>
+                //                 </Card.Body>
+                //             </Card>
+                //         </Col>
+                //     ))}
+                // </Row>
+                <Swiper
+                    modules={[Navigation, Pagination]}
+                    spaceBetween={30}
+                    slidesPerView={"auto"}
+                    navigation
+                    loop={true}
+                    centeredSlides={true}
+                    // pagination={{ clickable: true }}
+                    // 반응형: 화면 크기에 따라 카드 개수 변경
+                    // breakpoints={{
+                    //     576: { slidesPerView: 1.3 },
+                    //     768: { slidesPerView: 2.1 },
+                    //     992: { slidesPerView: 3 },
+                    //     1200: { slidesPerView: 3.5 },
+                    // }}
+                    className="mb-3 main-card"
+                >
                     {filteredClothes.map((item, index) => (
-                        <Col key={index} md={6} lg={4}>
-                            <Card className="clothing-card h-100 shadow-sm">
+                        <SwiperSlide key={item.id ?? index}>
+                            <Card className="clothing-card shadow-sm">
                                 {/* 이미지 표시 */}
                                 <div className="image-container">
                                     <img 
@@ -255,36 +345,48 @@ function Wardrobe() {
 
                                 <Card.Body>
                                     {/* 카테고리 */}
-                                    <div className="category-header mb-3">
-                                        <span className="clothing-icon">
+                                    <div className="category-header">
+                                        {/* <span className="clothing-icon">
                                             {getClothingIcon(item.main_category)}
-                                        </span>
-                                        <h5 className="category-name ms-2">
+                                        </span> */}
+                                        <h5 className="category-name">
                                             {item.main_category}
                                         </h5>
                                     </div>
 
                                     {/* 세부 정보 */}
-                                    <div className="details-section">
-                                        {item.details && Object.entries(item.details).map(([key, value]) => {
-                                            return (
-                                                <div key={key} className="detail-item">
-                                                    <span className="detail-label">{key}:</span>
-                                                    <span className="detail-value">{value}</span>
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="details-sections">
+                                        {item.details && Object.entries(item.details).map(([key, value]) => (
+                                            <div key={key} className="detail-item">
+                                                <span className="detail-label">{key}:</span>
+                                                <span className="detail-value">{value}</span>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     {/* 등록 날짜 */}
-                                    <div className="date-section mt-3 pt-3 border-top">
+                                    <div className="date-section mt-2 pt-2 border-top">
                                         <small className="text-muted">
                                             등록: {item.created_at}
                                         </small>
                                     </div>
 
                                     {/* 액션 버튼 */}
-                                    <div className="action-buttons mt-3 pt-3 border-top">
+                                    <div className="action-buttons-ward mt-2 pt-2 border-top">
+                                        <Button 
+                                            variant="primary" 
+                                            size="sm"
+                                            className="w-100"
+                                            onClick={() => deleteClothing(item.id)}
+                                            disabled={deletingId === item.id}
+                                        >
+                                            {deletingId === item.id ? (
+                                                <>
+                                                    <Spinner animation="border" size="sm" role="status" className="me-2" />
+                                                    피팅 중...
+                                                </>
+                                            ) : '피팅'}
+                                        </Button>
                                         <Button 
                                             variant="danger" 
                                             size="sm"
@@ -302,13 +404,13 @@ function Wardrobe() {
                                     </div>
                                 </Card.Body>
                             </Card>
-                        </Col>
+                        </SwiperSlide>
                     ))}
-                </Row>
+                </Swiper>
             )}
 
             {/* 돌아가기 버튼 */}
-            <div className="text-center mt-5">
+            <div className="text-center">
                 <Button 
                     variant="secondary" 
                     size="lg"

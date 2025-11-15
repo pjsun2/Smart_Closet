@@ -1,6 +1,6 @@
 .wardrobe-header {
     text-align: center;
-    padding: 40px 0;
+    padding: 20px 0 0 0;
     border-bottom: 2px solid #f0f0f0;
 }
 
@@ -10,11 +10,19 @@
     color: #333;
 }
 
+.main-card {
+    height: 69%;
+    padding: 0;
+    align-items: center;
+}
+
 .clothing-card {
     border: 2px solid #e9ecef;
     border-radius: 12px;
     transition: all 0.3s ease;
     overflow: hidden;
+    width: 100%;
+    margin: auto;
 }
 
 .clothing-card:hover {
@@ -26,7 +34,7 @@
 .category-header {
     display: flex;
     align-items: center;
-    padding-bottom: 15px;
+    /* padding-bottom: 15px; */
     border-bottom: 1px solid #e9ecef;
 }
 
@@ -40,14 +48,14 @@
     margin: 0 !important;
 }
 
-.details-section {
+/* .details-section {
     margin-top: 15px;
-}
+} */
 
 .detail-item {
-    display: flex;
+    /* display: flex; */
     justify-content: space-between;
-    padding: 8px 0;
+    /* padding: 8px 0; */
     border-bottom: 1px solid #f0f0f0;
     font-size: 0.95rem;
 }
@@ -69,19 +77,19 @@
     padding-left: 15px;
 }
 
-.action-buttons {
+.action-buttons-ward {
     display: flex;
     gap: 8px;
 }
 
-.action-buttons .btn {
+.action-buttons-ward .btn {
     flex: 1;
     font-weight: 600;
     border-radius: 6px;
     transition: all 0.3s ease;
 }
 
-.action-buttons .btn:hover {
+.action-buttons-ward .btn:hover {
     transform: scale(1.05);
 }
 
@@ -92,20 +100,25 @@
 }
 
 .image-container {
-    width: 100%;
-    height: 300px;
+    width: 70%;
+    height: 500px;
     overflow: hidden;
     background: #f0f0f0;
+    margin: auto;
 }
 
 .clothing-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center;
-    transition: transform 0.3s ease;
+    /* object-position: center; */
+    /* transition: transform 0.3s ease; */
 }
 
-.clothing-card:hover .clothing-image {
+/* .main-card {
+    height: 75%;
+} */
+
+/* .clothing-card:hover .clothing-image {
     transform: scale(1.05);
-}
+} */

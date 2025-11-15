@@ -60,7 +60,7 @@ def insert_clothing_for_current_user(image_url, main_category, sub_category, att
     except Exception as e:
         conn.rollback()
         print(f"[DB] 옷 저장 실패: {e}")
-        return jsonify(ok=False, message="옷 저장에 실패했습니다."), 500
+        return jsonify(ok=False, message="옷 저장에 실패했습니다.", id=user_id), 500
     finally:
         conn.close()
 
@@ -89,11 +89,39 @@ def get_current_user_clothing():
             ci_id, image_url, main_category, sub_category, create_date = clothing
             
             # 각 의류의 속성 조회
+            # cursor.execute('''
+            #     SELECT a.A_name, ca.CA_value
+            #     FROM clothing_attributes ca
+            #     JOIN attributes a ON ca.A_id = a.A_id
+            #     WHERE ca.CI_id = ?
+            # ''', (ci_id,))
             cursor.execute('''
-                SELECT a.A_name, ca.CA_value
+                SELECT 
+                    a.A_name,
+                    CASE 
+                        WHEN a.A_name IN ('추천 스타일 1순위', '추천 스타일 2순위', '추천 스타일 3순위')
+                        THEN TRIM(
+                            CASE 
+                                WHEN instr(ca.CA_value, ' (') > 0
+                                    THEN substr(ca.CA_value, 1, instr(ca.CA_value, ' (') - 1)
+                                ELSE ca.CA_value
+                            END
+                        )
+                        ELSE ca.CA_value
+                    END AS CA_value
                 FROM clothing_attributes ca
                 JOIN attributes a ON ca.A_id = a.A_id
                 WHERE ca.CI_id = ?
+                AND a.A_name IN (
+                        '추천 스타일 1순위',
+                        '추천 스타일 2순위',
+                        '추천 스타일 3순위',
+                        '기장',
+                        '색상',
+                        '소매기장',
+                        '핏'
+                )
+                order by a.A_id desc
             ''', (ci_id,))
             
             attributes = cursor.fetchall()
